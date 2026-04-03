@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Understanding LLMs From Scratch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F7F5F0;
+      --bg-warm: #EFEAE2;
+      --sidebar-bg: #1E1C19;
+      --sidebar-text: #A8A196;
+      --sidebar-text-hover: #E8E2D8;
+      --sidebar-active: #D4940A;
+      --text: #2A2520;
+      --text-muted: #6B6259;
+      --heading: #1A1815;
+      --accent: #C4850A;
+      --accent-light: #F5E6C8;
+      --accent-glow: rgba(212, 148, 10, 0.12);
+      --code-bg: #EDEADF;
+      --code-border: #DDD8CC;
+      --pre-bg: #1E1C19;
+      --pre-text: #E8E2D8;
+      --border: #DDD8CC;
+      --border-light: #E8E4DB;
+      --blockquote-bg: #F0EDE5;
+      --table-header: #E8E4DB;
+      --shadow: rgba(30, 28, 25, 0.06);
+      --link: #9A6F15;
+      --link-hover: #C4850A;
+      --progress-track: #E8E4DB;
+      --complete-check: #6B8E50;
+    }
+
+    html { font-size: 17px; scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.72;
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+    }
+
+    /* ========== SIDEBAR ========== */
+    .sidebar {
+      width: 320px;
+      min-width: 320px;
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-text);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 32px 28px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+
+    .sidebar-brand {
+      font-family: 'Crimson Pro', serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #E8E2D8;
+      letter-spacing: -0.01em;
+      line-height: 1.3;
+    }
+
+    .sidebar-brand span {
+      color: var(--sidebar-active);
+    }
+
+    .sidebar-sub {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-top: 8px;
+      color: #6B6259;
+      font-weight: 500;
+    }
+
+    .sidebar-progress {
+      padding: 16px 28px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+
+    .progress-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      color: #6B6259;
+    }
+
+    .progress-bar {
+      height: 3px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--sidebar-active);
+      border-radius: 3px;
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 0%;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 0 24px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.1) transparent;
+    }
+
+    .sidebar-nav::-webkit-scrollbar { width: 4px; }
+    .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+    .nav-part {
+      padding: 18px 28px 6px;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-weight: 600;
+      color: #5A5349;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 28px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      color: var(--sidebar-text);
+      position: relative;
+      font-size: 0.84rem;
+    }
+
+    .nav-item:hover {
+      color: var(--sidebar-text-hover);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .nav-item.active {
+      color: #E8E2D8;
+      background: rgba(212, 148, 10, 0.08);
+    }
+
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 4px;
+      bottom: 4px;
+      width: 3px;
+      background: var(--sidebar-active);
+      border-radius: 0 3px 3px 0;
+    }
+
+    .nav-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      width: 22px;
+      text-align: right;
+      flex-shrink: 0;
+      color: #5A5349;
+      font-weight: 500;
+    }
+
+    .nav-item.active .nav-num { color: var(--sidebar-active); }
+
+    .nav-title { flex: 1; }
+
+    .nav-check {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .nav-check.done {
+      background: var(--complete-check);
+      border-color: var(--complete-check);
+    }
+
+    .nav-check.done::after {
+      content: '';
+      width: 6px;
+      height: 3px;
+      border-left: 1.5px solid white;
+      border-bottom: 1.5px solid white;
+      transform: rotate(-45deg) translateY(-0.5px);
+    }
+
+    /* ========== MOBILE TOGGLE ========== */
+    .menu-toggle {
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 200;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--sidebar-bg);
+      border: none;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+
+    .menu-toggle span, .menu-toggle span::before, .menu-toggle span::after {
+      display: block;
+      width: 18px;
+      height: 1.5px;
+      background: #A8A196;
+      border-radius: 2px;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    .menu-toggle span::before, .menu-toggle span::after {
+      content: '';
+      position: absolute;
+      left: 0;
+    }
+    .menu-toggle span::before { top: -6px; }
+    .menu-toggle span::after { top: 6px; }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 90;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    /* ========== MAIN CONTENT ========== */
+    .main {
+      margin-left: 320px;
+      flex: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(247, 245, 240, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-light);
+      padding: 0 48px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .breadcrumb {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .breadcrumb-part { color: var(--accent); font-weight: 500; }
+
+    .breadcrumb-sep {
+      color: var(--border);
+      font-size: 0.7rem;
+    }
+
+    .topbar-nav {
+      display: flex;
+      gap: 6px;
+    }
+
+    .topbar-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      color: var(--text-muted);
+    }
+
+    .topbar-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 2px 8px var(--accent-glow);
+    }
+
+    .topbar-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .topbar-btn svg { width: 16px; height: 16px; }
+
+    .reading-progress {
+      position: fixed;
+      top: 0;
+      left: 320px;
+      right: 0;
+      height: 2px;
+      z-index: 60;
+      background: transparent;
+    }
+
+    .reading-progress-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    .content-wrap {
+      flex: 1;
+      padding: 48px 48px 96px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .content {
+      max-width: 720px;
+      width: 100%;
+    }
+
+    /* ========== LANDING PAGE ========== */
+    .landing { animation: fadeUp 0.5s ease both; }
+
+    .landing-hero {
+      text-align: center;
+      padding: 64px 0 48px;
+    }
+
+    .landing-eyebrow {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .landing-title {
+      font-family: 'Crimson Pro', serif;
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: var(--heading);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .landing-desc {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    .landing-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 48px;
+    }
+
+    .part-header {
+      font-family: 'Crimson Pro', serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--heading);
+      padding: 24px 0 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .part-header::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .lesson-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      background: white;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .lesson-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 20px var(--accent-glow), 0 1px 4px var(--shadow);
+      transform: translateY(-1px);
+    }
+
+    .card-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--accent);
+      background: var(--accent-light);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .card-info { flex: 1; }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 0.92rem;
+      color: var(--heading);
+    }
+
+    .card-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .card-arrow {
+      color: var(--border);
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .lesson-card:hover .card-arrow { color: var(--accent); transform: translateX(3px); }
+
+    /* ========== LESSON TYPOGRAPHY ========== */
+    .lesson { animation: fadeUp 0.4s ease both; }
+
+    .lesson h1 {
+      font-family: 'Crimson Pro', serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--heading);
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--accent);
+    }
+
+    .lesson h2 {
+      font-family: 'Crimson Pro', serif;
+      font-size: 1.45rem;
+      font-weight: 600;
+      color: var(--heading);
+      margin-top: 48px;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-light);
+      letter-spacing: -0.01em;
+    }
+
+    .lesson h3 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--heading);
+      margin-top: 32px;
+      margin-bottom: 12px;
+    }
+
+    .lesson p {
+      margin-bottom: 18px;
+    }
+
+    .lesson a {
+      color: var(--link);
+      text-decoration: underline;
+      text-decoration-color: rgba(154, 111, 21, 0.3);
+      text-underline-offset: 2px;
+      transition: all 0.2s;
+    }
+
+    .lesson a:hover {
+      color: var(--link-hover);
+      text-decoration-color: var(--link-hover);
+    }
+
+    .lesson strong { font-weight: 600; color: var(--heading); }
+
+    .lesson code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82em;
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #6B4A0A;
+    }
+
+    .lesson pre {
+      background: var(--pre-bg);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+
+    .lesson pre code {
+      background: none;
+      border: none;
+      padding: 0;
+      color: var(--pre-text);
+      font-size: 0.82rem;
+      line-height: 1.65;
+    }
+
+    .lesson blockquote {
+      background: var(--accent-light);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 16px 20px;
+      margin: 24px 0;
+      color: var(--text);
+    }
+
+    .lesson blockquote strong { color: var(--accent); }
+
+    .lesson table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 20px 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      font-size: 0.88rem;
+    }
+
+    .lesson th {
+      background: var(--table-header);
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 16px;
+      color: var(--heading);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .lesson td {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .lesson tr:hover td { background: rgba(212, 148, 10, 0.03); }
+
+    .lesson img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 10px;
+      margin: 24px 0;
+      box-shadow: 0 2px 16px var(--shadow);
+      border: 1px solid var(--border-light);
+    }
+
+    .lesson ul, .lesson ol {
+      margin: 12px 0 18px;
+      padding-left: 24px;
+    }
+
+    .lesson li {
+      margin-bottom: 6px;
+    }
+
+    .lesson li::marker {
+      color: var(--accent);
+    }
+
+    .lesson hr {
+      border: none;
+      height: 1px;
+      background: var(--border);
+      margin: 40px 0;
+    }
+
+    /* ========== LESSON FOOTER NAV ========== */
+    .lesson-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 64px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-btn {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 16px 20px;
+      background: white;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.25s;
+      text-decoration: none;
+      flex: 1;
+      max-width: 48%;
+    }
+
+    .footer-btn:hover {
+      border-color: var(--accent);
+      box-shadow: 0 4px 16px var(--accent-glow);
+    }
+
+    .footer-btn-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .footer-btn-title {
+      font-family: 'Crimson Pro', serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--heading);
+    }
+
+    .footer-next { text-align: right; margin-left: auto; }
+
+    /* ========== ANIMATIONS ========== */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.2); }
+      .menu-toggle { display: flex; }
+      .overlay.show { display: block; opacity: 1; }
+      .main { margin-left: 0; }
+      .topbar { padding: 0 20px 0 68px; }
+      .content-wrap { padding: 32px 20px 72px; }
+      .reading-progress { left: 0; }
+      .landing-title { font-size: 2rem; }
+      .lesson h1 { font-size: 1.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+<button class="menu-toggle" id="menuToggle" aria-label="Toggle menu"><span></span></button>
+<div class="overlay" id="overlay"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-brand">Understanding <span>LLMs</span><br>From Scratch</div>
+    <div class="sidebar-sub">Powered by microgpt</div>
+  </div>
+  <div class="sidebar-progress">
+    <div class="progress-label">
+      <span>Progress</span>
+      <span id="progressText">0 / 18</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  </div>
+  <nav class="sidebar-nav" id="sidebarNav"></nav>
+</aside>
+
+<div class="reading-progress"><div class="reading-progress-fill" id="readingFill"></div></div>
+
+<main class="main">
+  <header class="topbar">
+    <div class="breadcrumb" id="breadcrumb">
+      <span class="breadcrumb-part">Home</span>
+    </div>
+    <div class="topbar-nav">
+      <button class="topbar-btn" id="prevBtn" title="Previous lesson" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <button class="topbar-btn" id="nextBtn" title="Next lesson" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="content-wrap">
+    <div class="content" id="content"></div>
+  </div>
+</main>
+
+<script>
+const LESSONS = [
+  { file: '01-numbers-as-dials.md', num: 1, title: 'Numbers as Dials', desc: 'Functions, parameters, and 4,192 dials', part: 1 },
+  { file: '02-vectors.md', num: 2, title: 'Vectors', desc: 'Representing tokens as lists of numbers', part: 1 },
+  { file: '03-dot-product.md', num: 3, title: 'The Dot Product', desc: 'Measuring similarity between vectors', part: 1 },
+  { file: '04-probability-and-softmax.md', num: 4, title: 'Probability & Softmax', desc: 'Turning scores into probabilities', part: 1 },
+  { file: '05-loss.md', num: 5, title: 'The Loss', desc: "The model's report card", part: 1 },
+  { file: '06-derivatives.md', num: 6, title: 'Derivatives', desc: 'How each dial affects the output', part: 1 },
+  { file: '07-chain-rule.md', num: 7, title: 'The Chain Rule', desc: 'Tracing blame backward', part: 2 },
+  { file: '08-neuron.md', num: 8, title: 'A Single Neuron', desc: 'Weighted sums as building blocks', part: 2 },
+  { file: '09-relu.md', num: 9, title: 'ReLU', desc: 'Breaking linearity with max(0, x)', part: 2 },
+  { file: '10-gradient-descent.md', num: 10, title: 'Gradient Descent', desc: 'Walking downhill to learn', part: 2 },
+  { file: '11-adam.md', num: 11, title: 'Adam Optimizer', desc: 'Smarter training with momentum', part: 2 },
+  { file: '12-tokenization-and-embeddings.md', num: 12, title: 'Tokenization & Embeddings', desc: 'From text to vectors', part: 2 },
+  { file: '13-attention.md', num: 13, title: 'Attention', desc: 'The Q/K/V mechanism', part: 3 },
+  { file: '14-multi-head-attention.md', num: 14, title: 'Multi-Head Attention', desc: 'Parallel attention patterns', part: 3 },
+  { file: '15-full-forward-pass.md', num: 15, title: 'The Full Forward Pass', desc: 'Token in, prediction out', part: 3 },
+  { file: '16-full-training-step.md', num: 16, title: 'The Full Training Step', desc: 'One complete learning cycle', part: 3 },
+  { file: '17-experiments.md', num: 17, title: 'Experiments', desc: 'Turning the knobs', part: 3 },
+  { file: '18-from-microgpt-to-gpt4.md', num: 18, title: 'From microgpt to GPT-4', desc: 'Same idea, different scale', part: 3 },
+];
+
+const PARTS = {
+  1: 'Part 1: The Math You Need',
+  2: 'Part 2: The Neural Network',
+  3: 'Part 3: The Transformer',
+};
+
+let currentIndex = -1;
+let visited = new Set(JSON.parse(localStorage.getItem('llm-visited') || '[]'));
+
+function saveVisited() {
+  localStorage.setItem('llm-visited', JSON.stringify([...visited]));
+}
+
+// Build sidebar nav
+const sidebarNav = document.getElementById('sidebarNav');
+let currentPart = 0;
+
+// Home item
+const homeItem = document.createElement('div');
+homeItem.className = 'nav-item active';
+homeItem.dataset.index = '-1';
+homeItem.textContent = 'Home';
+homeItem.style.cssText = 'padding-left: 28px; font-weight: 600; color: #E8E2D8; margin-bottom: 4px;';
+homeItem.addEventListener('click', () => loadHome());
+sidebarNav.appendChild(homeItem);
+
+LESSONS.forEach((lesson, i) => {
+  if (lesson.part !== currentPart) {
+    currentPart = lesson.part;
+    const partEl = document.createElement('div');
+    partEl.className = 'nav-part';
+    partEl.textContent = PARTS[lesson.part];
+    sidebarNav.appendChild(partEl);
+  }
+  const item = document.createElement('div');
+  item.className = 'nav-item';
+  item.dataset.index = i;
+
+  const num = document.createElement('span');
+  num.className = 'nav-num';
+  num.textContent = String(lesson.num).padStart(2, '0');
+
+  const title = document.createElement('span');
+  title.className = 'nav-title';
+  title.textContent = lesson.title;
+
+  const check = document.createElement('span');
+  check.className = 'nav-check' + (visited.has(i) ? ' done' : '');
+
+  item.appendChild(num);
+  item.appendChild(title);
+  item.appendChild(check);
+  item.addEventListener('click', () => loadLesson(i));
+  sidebarNav.appendChild(item);
+});
+
+function updateProgress() {
+  const count = visited.size;
+  document.getElementById('progressText').textContent = count + ' / 18';
+  document.getElementById('progressFill').style.width = (count / 18 * 100) + '%';
+  sidebarNav.querySelectorAll('.nav-item').forEach(el => {
+    const idx = parseInt(el.dataset.index);
+    if (idx >= 0) {
+      const check = el.querySelector('.nav-check');
+      if (check) {
+        check.className = 'nav-check' + (visited.has(idx) ? ' done' : '');
+      }
+    }
+  });
+}
+
+function setActive(index) {
+  currentIndex = index;
+  sidebarNav.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', parseInt(el.dataset.index) === index);
+  });
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  prevBtn.disabled = index <= 0;
+  nextBtn.disabled = index >= LESSONS.length - 1;
+
+  if (index >= 0) {
+    const lesson = LESSONS[index];
+    document.getElementById('breadcrumb').textContent = '';
+    const partSpan = document.createElement('span');
+    partSpan.className = 'breadcrumb-part';
+    partSpan.textContent = PARTS[lesson.part];
+    const sep = document.createElement('span');
+    sep.className = 'breadcrumb-sep';
+    sep.textContent = '/';
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = lesson.title;
+    document.getElementById('breadcrumb').append(partSpan, sep, titleSpan);
+  } else {
+    document.getElementById('breadcrumb').textContent = '';
+    const homeSpan = document.createElement('span');
+    homeSpan.className = 'breadcrumb-part';
+    homeSpan.textContent = 'Home';
+    document.getElementById('breadcrumb').appendChild(homeSpan);
+  }
+}
+
+function safeRender(el, html) {
+  el.textContent = '';
+  const sanitized = DOMPurify.sanitize(html, {
+    ADD_TAGS: ['svg','g','path','line','rect','text','tspan','marker','defs','circle','polygon','polyline','foreignObject','style'],
+    ADD_ATTR: ['viewBox','xmlns','d','fill','stroke','transform','x','y','width','height','class','id','marker-end','dx','dy','text-anchor','dominant-baseline','rx','ry','cx','cy','r','points','stroke-width','font-size','font-family']
+  });
+  const template = document.createElement('template');
+  template.innerHTML = sanitized;
+  el.appendChild(template.content);
+}
+
+async function loadLesson(index) {
+  const lesson = LESSONS[index];
+  if (!lesson) return;
+  setActive(index);
+  closeMobileMenu();
+
+  try {
+    const resp = await fetch(lesson.file);
+    const md = await resp.text();
+    const html = marked.parse(md);
+    const contentEl = document.getElementById('content');
+    contentEl.className = 'content lesson';
+    safeRender(contentEl, html);
+
+    // Remove old nav links (Previous/Next lines from the md)
+    contentEl.querySelectorAll('p').forEach(p => {
+      if (p.textContent.startsWith('Previous:') || p.textContent.startsWith('Next:')) {
+        p.remove();
+      }
+    });
+
+    // Add lesson footer nav
+    const footer = document.createElement('div');
+    footer.className = 'lesson-footer';
+
+    if (index > 0) {
+      const prev = LESSONS[index - 1];
+      const prevEl = document.createElement('div');
+      prevEl.className = 'footer-btn';
+      prevEl.addEventListener('click', () => loadLesson(index - 1));
+      const prevLabel = document.createElement('div');
+      prevLabel.className = 'footer-btn-label';
+      prevLabel.textContent = 'Previous';
+      const prevTitle = document.createElement('div');
+      prevTitle.className = 'footer-btn-title';
+      prevTitle.textContent = prev.title;
+      prevEl.appendChild(prevLabel);
+      prevEl.appendChild(prevTitle);
+      footer.appendChild(prevEl);
+    }
+
+    if (index < LESSONS.length - 1) {
+      const next = LESSONS[index + 1];
+      const nextEl = document.createElement('div');
+      nextEl.className = 'footer-btn footer-next';
+      nextEl.addEventListener('click', () => loadLesson(index + 1));
+      const nextLabel = document.createElement('div');
+      nextLabel.className = 'footer-btn-label';
+      nextLabel.textContent = 'Next';
+      const nextTitle = document.createElement('div');
+      nextTitle.className = 'footer-btn-title';
+      nextTitle.textContent = next.title;
+      nextEl.appendChild(nextLabel);
+      nextEl.appendChild(nextTitle);
+      footer.appendChild(nextEl);
+    }
+
+    contentEl.appendChild(footer);
+
+    // Mark as visited after a short delay
+    setTimeout(() => {
+      visited.add(index);
+      saveVisited();
+      updateProgress();
+    }, 2000);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('readingFill').style.width = '0%';
+  } catch (e) {
+    document.getElementById('content').textContent = 'Error loading lesson: ' + e.message;
+  }
+}
+
+function loadHome() {
+  setActive(-1);
+  closeMobileMenu();
+  const contentEl = document.getElementById('content');
+  contentEl.className = 'content landing';
+  contentEl.textContent = '';
+
+  const hero = document.createElement('div');
+  hero.className = 'landing-hero';
+
+  const eyebrow = document.createElement('div');
+  eyebrow.className = 'landing-eyebrow';
+  eyebrow.textContent = '18 Lessons \u00b7 Zero Prerequisites';
+
+  const title = document.createElement('h1');
+  title.className = 'landing-title';
+  title.textContent = 'Understanding LLMs From Scratch';
+
+  const desc = document.createElement('p');
+  desc.className = 'landing-desc';
+  desc.textContent = 'A hands-on course grounded in microgpt \u2014 a complete GPT in ~200 lines of pure Python. Every concept explained with real code and actual numbers.';
+
+  hero.appendChild(eyebrow);
+  hero.appendChild(title);
+  hero.appendChild(desc);
+  contentEl.appendChild(hero);
+
+  const cards = document.createElement('div');
+  cards.className = 'landing-cards';
+
+  let landingPart = 0;
+  LESSONS.forEach((lesson, i) => {
+    if (lesson.part !== landingPart) {
+      landingPart = lesson.part;
+      const ph = document.createElement('div');
+      ph.className = 'part-header';
+      ph.textContent = PARTS[lesson.part];
+      cards.appendChild(ph);
+    }
+
+    const card = document.createElement('div');
+    card.className = 'lesson-card';
+    card.addEventListener('click', () => loadLesson(i));
+
+    const numEl = document.createElement('div');
+    numEl.className = 'card-num';
+    numEl.textContent = lesson.num;
+
+    const info = document.createElement('div');
+    info.className = 'card-info';
+    const ct = document.createElement('div');
+    ct.className = 'card-title';
+    ct.textContent = lesson.title;
+    const cd = document.createElement('div');
+    cd.className = 'card-desc';
+    cd.textContent = lesson.desc;
+    info.appendChild(ct);
+    info.appendChild(cd);
+
+    const arrow = document.createElement('div');
+    arrow.className = 'card-arrow';
+    arrow.textContent = '\u2192';
+
+    card.appendChild(numEl);
+    card.appendChild(info);
+    card.appendChild(arrow);
+    cards.appendChild(card);
+  });
+
+  contentEl.appendChild(cards);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Top bar nav
+document.getElementById('prevBtn').addEventListener('click', () => {
+  if (currentIndex > 0) loadLesson(currentIndex - 1);
+});
+document.getElementById('nextBtn').addEventListener('click', () => {
+  if (currentIndex < LESSONS.length - 1) loadLesson(currentIndex + 1);
+});
+
+// Reading progress
+window.addEventListener('scroll', () => {
+  const winH = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = winH > 0 ? (window.scrollY / winH) * 100 : 0;
+  document.getElementById('readingFill').style.width = Math.min(pct, 100) + '%';
+});
+
+// Mobile menu
+function closeMobileMenu() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+document.getElementById('menuToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+});
+document.getElementById('overlay').addEventListener('click', closeMobileMenu);
+
+// Keyboard nav
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft' && currentIndex > 0) loadLesson(currentIndex - 1);
+  if (e.key === 'ArrowRight' && currentIndex < LESSONS.length - 1) loadLesson(currentIndex + 1);
+});
+
+// Init
+updateProgress();
+loadHome();
+</script>
+</body>
+</html>
