@@ -102,3 +102,7 @@ python3 microgpt.py
 ```
 
 No dependencies required. Pure Python. Trains on 32,000 names and generates new ones.
+
+## Credits
+
+The teaching example used throughout this course is [microgpt](https://gist.github.com/karpathy/8627fe009c40f57531cb18360106ce95) by [Andrej Karpathy](https://karpathy.ai/) — a complete GPT implementation in ~200 lines of pure Python with zero dependencies.
