@@ -1031,11 +1031,35 @@ function loadHome() {
 
   const desc = document.createElement('p');
   desc.className = 'landing-desc';
-  desc.textContent = 'A hands-on course grounded in microgpt \u2014 a complete GPT in ~200 lines of pure Python. Every concept explained with real code and actual numbers.';
+  desc.textContent = 'Every concept explained with real code and actual numbers.';
+
+  const credit = document.createElement('p');
+  credit.className = 'landing-desc';
+  credit.style.marginTop = '12px';
+  credit.style.fontSize = '0.92rem';
+  const creditText1 = document.createTextNode('Built on ');
+  const creditLink1 = document.createElement('a');
+  creditLink1.href = 'https://gist.github.com/karpathy/8627fe009c40f57531cb18360106ce95';
+  creditLink1.textContent = 'microgpt';
+  creditLink1.target = '_blank';
+  creditLink1.style.color = 'var(--accent)';
+  const creditText2 = document.createTextNode(' by ');
+  const creditLink2 = document.createElement('a');
+  creditLink2.href = 'https://karpathy.ai/';
+  creditLink2.textContent = 'Andrej Karpathy';
+  creditLink2.target = '_blank';
+  creditLink2.style.color = 'var(--accent)';
+  const creditText3 = document.createTextNode(' \u2014 a complete GPT in ~200 lines of pure Python, zero dependencies.');
+  credit.appendChild(creditText1);
+  credit.appendChild(creditLink1);
+  credit.appendChild(creditText2);
+  credit.appendChild(creditLink2);
+  credit.appendChild(creditText3);
 
   hero.appendChild(eyebrow);
   hero.appendChild(title);
   hero.appendChild(desc);
+  hero.appendChild(credit);
   contentEl.appendChild(hero);
 
   const cards = document.createElement('div');
