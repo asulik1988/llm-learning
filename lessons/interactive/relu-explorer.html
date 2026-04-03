@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activation Function Explorer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #F7F5F0;
+    --amber: #C4850A;
+    --amber-light: #E8A830;
+    --amber-glow: rgba(196, 133, 10, 0.12);
+    --dark: #2A2520;
+    --mid: #6B5F54;
+    --light-border: #DDD8D0;
+    --card-bg: #FFFFFF;
+    --mono: "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    background: var(--cream);
+    color: var(--dark);
+    font-family: var(--sans);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  h1 {
+    font-size: 1.85rem;
+    font-weight: 700;
+    color: var(--dark);
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    font-size: 1.05rem;
+    color: var(--mid);
+    margin-top: 0.35rem;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--light-border);
+    border-radius: 14px;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 3px rgba(42, 37, 32, 0.04);
+  }
+
+  .card-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--amber);
+    margin-bottom: 1.1rem;
+  }
+
+  /* Selector buttons */
+  .selector-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+
+  .selector-btn {
+    font-family: var(--sans);
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 0.55rem 1.1rem;
+    border: 2px solid var(--light-border);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--mid);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .selector-btn:hover {
+    border-color: var(--amber-light);
+    color: var(--dark);
+  }
+
+  .selector-btn.active {
+    border-color: var(--amber);
+    background: var(--amber-glow);
+    color: var(--amber);
+  }
+
+  /* Canvas containers */
+  .canvas-wrap {
+    position: relative;
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #FDFCFA;
+    border: 1px solid var(--light-border);
+  }
+
+  .canvas-wrap canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Explanation panel */
+  .explanation {
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: var(--dark);
+    padding: 1rem 1.25rem;
+    background: var(--amber-glow);
+    border-radius: 10px;
+    border-left: 3px solid var(--amber);
+    margin-top: 1rem;
+  }
+
+  .explanation .fn-label {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--amber);
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+
+  /* Code reference */
+  .code-ref {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--mid);
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: rgba(42, 37, 32, 0.04);
+    border-radius: 8px;
+    line-height: 1.6;
+  }
+
+  .code-ref strong {
+    color: var(--dark);
+  }
+
+  /* Two-column layout for gradient + fit */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+
+  @media (max-width: 640px) {
+    .two-col { grid-template-columns: 1fr; }
+    .selector-btn { flex: 1; min-width: 0; text-align: center; padding: 0.5rem 0.5rem; font-size: 0.8rem; }
+  }
+
+  .gradient-label {
+    font-size: 0.82rem;
+    color: var(--mid);
+    margin-top: 0.6rem;
+    font-family: var(--mono);
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Activation Function Explorer</h1>
+    <p class="subtitle">See why nonlinearity is the key to learning complex patterns</p>
+  </header>
+
+  <!-- Selector -->
+  <div class="card">
+    <div class="card-title">Choose an Activation Function</div>
+    <div class="selector-row" id="selector-row"></div>
+    <div id="explanation" class="explanation"></div>
+  </div>
+
+  <!-- Main activation curve -->
+  <div class="card">
+    <div class="card-title">Activation Function Curve</div>
+    <div class="canvas-wrap">
+      <canvas id="mainCanvas" width="1720" height="860"></canvas>
+    </div>
+  </div>
+
+  <!-- Gradient + Curve Fitting side by side -->
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Gradient (Derivative)</div>
+      <div class="canvas-wrap">
+        <canvas id="gradientCanvas" width="860" height="540"></canvas>
+      </div>
+      <div class="gradient-label" id="gradient-label"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Curve Fitting Demo</div>
+      <div class="canvas-wrap">
+        <canvas id="fitCanvas" width="860" height="540"></canvas>
+      </div>
+      <p style="font-size:0.82rem;color:var(--mid);margin-top:0.6rem;">
+        Target: y = sin(x) (dots). Colored line: what a 2-layer network can approximate.
+      </p>
+    </div>
+  </div>
+
+  <!-- Code reference -->
+  <div class="code-ref" id="code-ref"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Data ─────────────────────────────────────────────────── */
+
+  var activations = [
+    {
+      id: "linear",
+      label: "None (Linear)",
+      fn: function (x) { return x; },
+      dfn: function (x) { return 1; },
+      color: "#7A8B99",
+      explain: {
+        formula: "f(x) = x",
+        text: "Two linear layers in a row = one linear layer. No matter how many you stack, you can only learn straight lines."
+      }
+    },
+    {
+      id: "relu",
+      label: "ReLU",
+      fn: function (x) { return Math.max(0, x); },
+      dfn: function (x) { return x > 0 ? 1 : 0; },
+      color: "#C4850A",
+      explain: {
+        formula: "f(x) = max(0, x)",
+        text: "Introduces 'bends.' Each neuron is either on or off. With 64 neurons, you get 2\u2076\u2074 possible on/off patterns \u2014 enough to represent almost any function."
+      }
+    },
+    {
+      id: "leaky",
+      label: "Leaky ReLU",
+      fn: function (x) { return x > 0 ? x : 0.1 * x; },
+      dfn: function (x) { return x > 0 ? 1 : 0.1; },
+      color: "#D4621A",
+      explain: {
+        formula: "f(x) = max(0.1\u00B7x, x)",
+        text: "Like ReLU but dead neurons can still recover. The small negative slope keeps gradients flowing."
+      }
+    },
+    {
+      id: "tanh",
+      label: "Tanh",
+      fn: function (x) { return Math.tanh(x); },
+      dfn: function (x) { var t = Math.tanh(x); return 1 - t * t; },
+      color: "#5A8F3D",
+      explain: {
+        formula: "f(x) = tanh(x)",
+        text: "Squashes everything between \u22121 and 1. Smoother than ReLU but slower to compute. Used in microgpt Lab 7."
+      }
+    }
+  ];
+
+  /* Pre-computed curve-fitting approximations for sin(x) */
+  function sinTarget(x) { return Math.sin(x); }
+
+  /* Linear best-fit to sin on [-4, 4] is essentially y \u2248 0 (slope ~0) */
+  function fitLinear(x) { return 0.12 * x; }
+
+  /*
+   * Piecewise-linear ReLU approx -- 7 knots tracing sin(x):
+   * Linear interpolation between knot points.
+   */
+  function fitReLU(x) {
+    var knots = [
+      [-4.0,  0.76],
+      [-3.14, 0.0],
+      [-1.57, -1.0],
+      [0.0,   0.0],
+      [1.57,  1.0],
+      [3.14,  0.0],
+      [4.0,  -0.76]
+    ];
+    if (x <= knots[0][0]) return knots[0][1];
+    for (var i = 1; i < knots.length; i++) {
+      if (x <= knots[i][0]) {
+        var t = (x - knots[i - 1][0]) / (knots[i][0] - knots[i - 1][0]);
+        return knots[i - 1][1] + t * (knots[i][1] - knots[i - 1][1]);
+      }
+    }
+    return knots[knots.length - 1][1];
+  }
+
+  /* Leaky ReLU: similar piecewise but slightly different at edges */
+  function fitLeaky(x) {
+    var knots = [
+      [-4.0,  0.72],
+      [-3.14, -0.05],
+      [-1.57, -0.97],
+      [0.0,   0.03],
+      [1.57,  0.97],
+      [3.14, -0.03],
+      [4.0,  -0.72]
+    ];
+    if (x <= knots[0][0]) return knots[0][1];
+    for (var i = 1; i < knots.length; i++) {
+      if (x <= knots[i][0]) {
+        var t = (x - knots[i - 1][0]) / (knots[i][0] - knots[i - 1][0]);
+        return knots[i - 1][1] + t * (knots[i][1] - knots[i - 1][1]);
+      }
+    }
+    return knots[knots.length - 1][1];
+  }
+
+  /* Smooth tanh-based approx: linear combo of tanh units */
+  function fitTanh(x) {
+    return (
+      0.55 * Math.tanh(1.6 * (x - 1.57)) +
+      -0.55 * Math.tanh(1.6 * (x + 1.57)) +
+      0.50 * Math.tanh(2.0 * x) +
+      -0.01
+    );
+  }
+
+  var fitFunctions = {
+    linear: fitLinear,
+    relu: fitReLU,
+    leaky: fitLeaky,
+    tanh: fitTanh
+  };
+
+  /* ── State ────────────────────────────────────────────────── */
+
+  var currentIdx = 1; /* start on ReLU */
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  /* ── Canvas helpers ───────────────────────────────────────── */
+
+  function setupCanvas(canvas) {
+    var rect = canvas.getBoundingClientRect();
+    var w = rect.width * dpr;
+    var h = rect.height * dpr;
+    canvas.width = w;
+    canvas.height = h;
+    var ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+    return { ctx: ctx, w: rect.width, h: rect.height };
+  }
+
+  function drawGrid(ctx, w, h, xMin, xMax, yMin, yMax) {
+    ctx.save();
+    ctx.strokeStyle = "#E8E4DD";
+    ctx.lineWidth = 1;
+
+    /* vertical grid lines */
+    for (var gx = Math.ceil(xMin); gx <= Math.floor(xMax); gx++) {
+      var px = mapX(gx, w, xMin, xMax);
+      ctx.beginPath();
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, h);
+      ctx.stroke();
+    }
+
+    /* horizontal grid lines */
+    for (var gy = Math.ceil(yMin); gy <= Math.floor(yMax); gy++) {
+      var py = mapY(gy, h, yMin, yMax);
+      ctx.beginPath();
+      ctx.moveTo(0, py);
+      ctx.lineTo(w, py);
+      ctx.stroke();
+    }
+
+    /* axes */
+    ctx.strokeStyle = "#CCC6BC";
+    ctx.lineWidth = 1.5;
+
+    /* x axis */
+    var y0 = mapY(0, h, yMin, yMax);
+    if (y0 >= 0 && y0 <= h) {
+      ctx.beginPath();
+      ctx.moveTo(0, y0);
+      ctx.lineTo(w, y0);
+      ctx.stroke();
+    }
+
+    /* y axis */
+    var x0 = mapX(0, w, xMin, xMax);
+    if (x0 >= 0 && x0 <= w) {
+      ctx.beginPath();
+      ctx.moveTo(x0, 0);
+      ctx.lineTo(x0, h);
+      ctx.stroke();
+    }
+
+    /* labels */
+    ctx.fillStyle = "#9B9088";
+    ctx.font = "11px " + getComputedStyle(document.body).getPropertyValue("--mono");
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    for (var lx = Math.ceil(xMin); lx <= Math.floor(xMax); lx++) {
+      if (lx === 0) continue;
+      ctx.fillText(lx.toString(), mapX(lx, w, xMin, xMax), y0 + 4);
+    }
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (var ly = Math.ceil(yMin); ly <= Math.floor(yMax); ly++) {
+      if (ly === 0) continue;
+      ctx.fillText(ly.toString(), x0 - 6, mapY(ly, h, yMin, yMax));
+    }
+
+    ctx.restore();
+  }
+
+  function mapX(x, w, xMin, xMax) {
+    return ((x - xMin) / (xMax - xMin)) * w;
+  }
+
+  function mapY(y, h, yMin, yMax) {
+    return h - ((y - yMin) / (yMax - yMin)) * h;
+  }
+
+  function drawCurve(ctx, fn, w, h, xMin, xMax, yMin, yMax, color, lineWidth) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth || 3;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    var steps = Math.round(w * 2);
+    for (var i = 0; i <= steps; i++) {
+      var t = i / steps;
+      var x = xMin + t * (xMax - xMin);
+      var y = fn(x);
+      var px = mapX(x, w, xMin, xMax);
+      var py = mapY(y, h, yMin, yMax);
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ── Draw functions ───────────────────────────────────────── */
+
+  var mainCanvas = document.getElementById("mainCanvas");
+  var gradientCanvas = document.getElementById("gradientCanvas");
+  var fitCanvas = document.getElementById("fitCanvas");
+
+  function drawMain() {
+    var s = setupCanvas(mainCanvas);
+    var ctx = s.ctx, w = s.w, h = s.h;
+    var pad = 40;
+    var xMin = -4, xMax = 4, yMin = -2, yMax = 4;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.save();
+    ctx.translate(pad, pad * 0.6);
+    var cw = w - pad * 2;
+    var ch = h - pad * 1.4;
+
+    drawGrid(ctx, cw, ch, xMin, xMax, yMin, yMax);
+
+    var act = activations[currentIdx];
+    drawCurve(ctx, act.fn, cw, ch, xMin, xMax, yMin, yMax, act.color, 3.5);
+
+    /* label */
+    ctx.fillStyle = act.color;
+    ctx.font = "bold 14px " + getComputedStyle(document.body).getPropertyValue("--sans");
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(act.explain.formula, 12, 8);
+
+    ctx.restore();
+  }
+
+  function drawGradient() {
+    var s = setupCanvas(gradientCanvas);
+    var ctx = s.ctx, w = s.w, h = s.h;
+    var pad = 32;
+    var xMin = -4, xMax = 4, yMin = -0.3, yMax = 1.3;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.save();
+    ctx.translate(pad, pad * 0.5);
+    var cw = w - pad * 2;
+    var ch = h - pad * 1.2;
+
+    drawGrid(ctx, cw, ch, xMin, xMax, yMin, yMax);
+
+    var act = activations[currentIdx];
+
+    /* For step functions (relu, leaky), draw with slight visual treatment */
+    if (act.id === "relu" || act.id === "leaky") {
+      /* Draw the derivative as two horizontal segments with a dot at 0 */
+      var leftVal = act.dfn(-1);
+      var rightVal = act.dfn(1);
+
+      ctx.strokeStyle = act.color;
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+
+      /* left segment */
+      ctx.beginPath();
+      ctx.moveTo(mapX(xMin, cw, xMin, xMax), mapY(leftVal, ch, yMin, yMax));
+      ctx.lineTo(mapX(0, cw, xMin, xMax), mapY(leftVal, ch, yMin, yMax));
+      ctx.stroke();
+
+      /* right segment */
+      ctx.beginPath();
+      ctx.moveTo(mapX(0, cw, xMin, xMax), mapY(rightVal, ch, yMin, yMax));
+      ctx.lineTo(mapX(xMax, cw, xMin, xMax), mapY(rightVal, ch, yMin, yMax));
+      ctx.stroke();
+
+      /* open circles at discontinuity */
+      var cx = mapX(0, cw, xMin, xMax);
+      ctx.lineWidth = 2;
+
+      /* open circle at top */
+      ctx.beginPath();
+      ctx.arc(cx, mapY(rightVal, ch, yMin, yMax), 4, 0, 2 * Math.PI);
+      ctx.fillStyle = "#FDFCFA";
+      ctx.fill();
+      ctx.strokeStyle = act.color;
+      ctx.stroke();
+
+      /* filled circle at bottom */
+      ctx.beginPath();
+      ctx.arc(cx, mapY(leftVal, ch, yMin, yMax), 4, 0, 2 * Math.PI);
+      ctx.fillStyle = act.color;
+      ctx.fill();
+    } else {
+      drawCurve(ctx, act.dfn, cw, ch, xMin, xMax, yMin, yMax, act.color, 3);
+    }
+
+    /* label */
+    ctx.fillStyle = act.color;
+    ctx.font = "bold 12px " + getComputedStyle(document.body).getPropertyValue("--sans");
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    var dLabels = {
+      linear: "f'(x) = 1",
+      relu: "f'(x) = 0 or 1",
+      leaky: "f'(x) = 0.1 or 1",
+      tanh: "f'(x) = 1 \u2212 tanh\u00B2(x)"
+    };
+    ctx.fillText(dLabels[act.id], 8, 6);
+
+    ctx.restore();
+  }
+
+  function drawFit() {
+    var s = setupCanvas(fitCanvas);
+    var ctx = s.ctx, w = s.w, h = s.h;
+    var pad = 32;
+    var xMin = -4, xMax = 4, yMin = -1.8, yMax = 1.8;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.save();
+    ctx.translate(pad, pad * 0.5);
+    var cw = w - pad * 2;
+    var ch = h - pad * 1.2;
+
+    drawGrid(ctx, cw, ch, xMin, xMax, yMin, yMax);
+
+    /* sin dots */
+    ctx.fillStyle = "#B8AFA6";
+    for (var i = -3.8; i <= 3.8; i += 0.25) {
+      var px = mapX(i, cw, xMin, xMax);
+      var py = mapY(sinTarget(i), ch, yMin, yMax);
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    /* fit curve */
+    var act = activations[currentIdx];
+    var fitFn = fitFunctions[act.id];
+    drawCurve(ctx, fitFn, cw, ch, xMin, xMax, yMin, yMax, act.color, 3);
+
+    /* quality label */
+    var qualityLabels = {
+      linear: "Poor fit (straight line only)",
+      relu: "Good fit (piecewise linear)",
+      leaky: "Good fit (piecewise linear)",
+      tanh: "Good fit (smooth approximation)"
+    };
+
+    ctx.fillStyle = act.color;
+    ctx.font = "bold 11px " + getComputedStyle(document.body).getPropertyValue("--sans");
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    ctx.fillText(qualityLabels[act.id], cw - 4, 6);
+
+    ctx.restore();
+  }
+
+  /* ── UI wiring ────────────────────────────────────────────── */
+
+  var selectorRow = document.getElementById("selector-row");
+  var explanationEl = document.getElementById("explanation");
+  var gradientLabelEl = document.getElementById("gradient-label");
+  var codeRefEl = document.getElementById("code-ref");
+
+  /* Build selector buttons */
+  activations.forEach(function (act, idx) {
+    var btn = document.createElement("button");
+    btn.className = "selector-btn" + (idx === currentIdx ? " active" : "");
+    btn.textContent = act.label;
+    btn.setAttribute("data-idx", idx.toString());
+    btn.addEventListener("click", function () {
+      select(idx);
+    });
+    selectorRow.appendChild(btn);
+  });
+
+  function select(idx) {
+    currentIdx = idx;
+
+    /* update button states */
+    var btns = selectorRow.querySelectorAll(".selector-btn");
+    btns.forEach(function (b, i) {
+      if (i === idx) b.classList.add("active");
+      else b.classList.remove("active");
+    });
+
+    updateExplanation();
+    drawMain();
+    drawGradient();
+    drawFit();
+  }
+
+  function updateExplanation() {
+    var act = activations[currentIdx];
+
+    /* Clear and rebuild explanation using DOM methods */
+    while (explanationEl.firstChild) {
+      explanationEl.removeChild(explanationEl.firstChild);
+    }
+
+    var formulaSpan = document.createElement("span");
+    formulaSpan.className = "fn-label";
+    formulaSpan.textContent = act.explain.formula;
+    explanationEl.appendChild(formulaSpan);
+
+    var textNode = document.createTextNode(act.explain.text);
+    explanationEl.appendChild(textNode);
+
+    /* Gradient label */
+    while (gradientLabelEl.firstChild) {
+      gradientLabelEl.removeChild(gradientLabelEl.firstChild);
+    }
+    var gradText = document.createTextNode(
+      "This is what backward() uses: the local gradient at microgpt.py:57\u201358"
+    );
+    gradientLabelEl.appendChild(gradText);
+
+    /* Code reference */
+    while (codeRefEl.firstChild) {
+      codeRefEl.removeChild(codeRefEl.firstChild);
+    }
+
+    var refStrong = document.createElement("strong");
+    refStrong.textContent = "Connection to microgpt: ";
+    codeRefEl.appendChild(refStrong);
+
+    var refText = document.createTextNode(
+      "microgpt uses ReLU at line 174: x = [xi.relu() for xi in x]. Lab 9 removes it entirely to show the collapse."
+    );
+    codeRefEl.appendChild(refText);
+  }
+
+  /* ── Resize handling ──────────────────────────────────────── */
+
+  var resizeTimer;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      drawMain();
+      drawGradient();
+      drawFit();
+    }, 100);
+  });
+
+  /* ── Initial draw ─────────────────────────────────────────── */
+
+  updateExplanation();
+  drawMain();
+  drawGradient();
+  drawFit();
+
+})();
+</script>
+</body>
+</html>

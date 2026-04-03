@@ -266,4 +266,14 @@ But the foundation is here: every operation in microgpt's `Value` class stores i
 > 6. `loss.backward()` (`microgpt.py:205`) computes gradients for all 4,192 parameters
 > 7. This lesson covers single-step derivatives; the **chain rule** (composing them across many operations) is the next topic
 
+
+---
+
+> **Lab 6: Verify Gradients** — Numerically verify that backward() computes correct gradients.
+>
+> ```bash
+> cd labs && python3 lab06_verify_gradients.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 7](./07-chain-rule.md)

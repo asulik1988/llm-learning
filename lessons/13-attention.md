@@ -72,6 +72,14 @@ values[li].append(v)
 
 So when the next token comes along and computes its Query, it can compare against all the Keys that have been stored so far -- including the one we just added. This growing collection of stored Keys and Values is called the **KV cache**.
 
+### A note on causal masking
+
+If you read about attention in PyTorch tutorials, you'll see something called a **causal mask** -- a triangular matrix that prevents each token from attending to future tokens. This is important because during training, the model shouldn't be able to "cheat" by looking ahead at the answer.
+
+microgpt doesn't need an explicit mask because it processes tokens **one at a time, left to right**. When token 3 runs, only the Keys and Values for tokens 0, 1, 2, and 3 are in the cache. Tokens 4, 5, etc. haven't been processed yet, so their Keys and Values don't exist. Causality is enforced automatically by the sequential processing order.
+
+In real implementations, all tokens in a sequence are processed in parallel for efficiency (as a single matrix multiplication). Since all tokens exist simultaneously, an explicit triangular mask is needed to hide future positions. The effect is identical -- each token can only attend to itself and earlier tokens -- but the mechanism differs.
+
 ## Computing Attention Scores
 
 Now the actual attention computation. The current token's Query is compared against every stored Key using a dot product. This happens at `microgpt.py:162`:
@@ -92,6 +100,10 @@ score_t = sum of (Q[j] * K_t[j]) for each dimension j
 ```
 
 This is the dot product from Lesson 3. If Q and K point in similar directions, the score is high. If they point in different directions, the score is low.
+
+**Try it yourself:** Type a name and see how each attention head focuses on different past tokens.
+
+[Attention Heatmap](./interactive/attention-heatmap.html)
 
 ### Step 2: Divide by sqrt(head_dim)
 
@@ -292,4 +304,14 @@ Early in training, the attention weights are essentially random. After many trai
 | Softmax | Turn scores into weights summing to `1` | `microgpt.py:163` |
 | Weighted sum of Vs | Blend past information by relevance | `microgpt.py:164` |
 
+
+---
+
+> **Lab 13: Remove Attention** — Skip the attention block entirely. Measure how much worse the model gets.
+>
+> ```bash
+> cd labs && python3 lab13_remove_attention.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 14](./14-multi-head-attention.md)

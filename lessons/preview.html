@@ -637,6 +637,32 @@
       margin: 40px 0;
     }
 
+    .interactive-embed {
+      margin: 24px 0;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px var(--shadow);
+      background: white;
+    }
+
+    .interactive-embed iframe {
+      width: 100%;
+      border: none;
+      display: block;
+      min-height: 400px;
+    }
+
+    .interactive-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      font-weight: 600;
+      padding: 10px 16px 0;
+      background: white;
+    }
+
     /* ========== LESSON FOOTER NAV ========== */
     .lesson-footer {
       display: flex;
@@ -767,12 +793,14 @@ const LESSONS = [
   { file: '16-full-training-step.md', num: 16, title: 'The Full Training Step', desc: 'One complete learning cycle', part: 3 },
   { file: '17-experiments.md', num: 17, title: 'Experiments', desc: 'Turning the knobs', part: 3 },
   { file: '18-from-microgpt-to-gpt4.md', num: 18, title: 'From microgpt to GPT-4', desc: 'Same idea, different scale', part: 3 },
+  { file: 'appendix-pytorch-mapping.md', num: 'A', title: 'microgpt to PyTorch', desc: 'Mapping concepts to real implementations', part: 4 },
 ];
 
 const PARTS = {
   1: 'Part 1: The Math You Need',
   2: 'Part 2: The Neural Network',
   3: 'Part 3: The Transformer',
+  4: 'Appendices',
 };
 
 let currentIndex = -1;
@@ -900,6 +928,34 @@ async function loadLesson(index) {
     contentEl.querySelectorAll('p').forEach(p => {
       if (p.textContent.startsWith('Previous:') || p.textContent.startsWith('Next:')) {
         p.remove();
+      }
+    });
+
+    // Embed interactive visualizations: convert links to ./interactive/*.html into iframes
+    contentEl.querySelectorAll('a').forEach(a => {
+      const href = a.getAttribute('href');
+      if (href && href.includes('/interactive/') && href.endsWith('.html')) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'interactive-embed';
+        const label = document.createElement('div');
+        label.className = 'interactive-label';
+        label.textContent = 'Interactive';
+        const iframe = document.createElement('iframe');
+        iframe.src = href;
+        iframe.title = a.textContent || 'Interactive visualization';
+        iframe.loading = 'lazy';
+        // Auto-resize iframe to fit content — no internal scrolling
+        iframe.addEventListener('load', () => {
+          try {
+            const h = iframe.contentDocument.documentElement.scrollHeight;
+            iframe.style.height = (h + 20) + 'px';
+          } catch(e) { iframe.style.height = '1200px'; }
+        });
+        wrapper.appendChild(label);
+        wrapper.appendChild(iframe);
+        // Replace the parent paragraph containing the link
+        const parent = a.closest('p') || a.parentElement;
+        parent.replaceWith(wrapper);
       }
     });
 

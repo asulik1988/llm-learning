@@ -62,6 +62,10 @@ D = [2, 5, 3]
 2 + 0 + (-3) = -1
 ```
 
+**Try it yourself:** Drag the vectors to see how direction affects the dot product.
+
+[Dot Product Playground](./interactive/dot-product.html)
+
 The dot product is `-1`. Notice how position 1 contributed nothing (because `C` has a `0` there) and position 2 *subtracted* (because `C` has a negative number there).
 
 ## What Does the Dot Product Tell Us?
@@ -232,4 +236,14 @@ In the full model, this happens many times: microgpt has `4` attention heads (`m
 > 5. The dot product of query and key produces a raw attention **score**
 > 6. Scores are divided by `head_dim**0.5` to keep them from growing too large
 
+
+---
+
+> **Lab 3: Dot Product Similarity** — Compute dot products between trained letter embeddings. See which letters the model considers similar.
+>
+> ```bash
+> cd labs && python3 lab03_dot_product_similarity.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 4](./04-probability-and-softmax.md)

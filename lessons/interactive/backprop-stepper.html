@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backpropagation Stepper</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: #F7F5F0;
+    color: #2A2520;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px 48px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+    color: #2A2520;
+  }
+
+  .subtitle {
+    font-size: 15px;
+    color: #6B6560;
+    margin-bottom: 28px;
+    font-style: italic;
+  }
+
+  .main-layout {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 1200px;
+  }
+
+  .left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex: 1;
+    min-width: 620px;
+  }
+
+  .right-col {
+    width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .card {
+    background: #FFFFFF;
+    border-radius: 10px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 8px rgba(42, 37, 32, 0.06);
+    border: 1px solid #E8E4DE;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #C4850A;
+    margin-bottom: 12px;
+  }
+
+  .preset-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .preset-btn {
+    font-family: 'Georgia', serif;
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1.5px solid #D4CFC8;
+    background: #FAFAF8;
+    color: #2A2520;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .preset-btn:hover {
+    border-color: #C4850A;
+    background: #FDF8EF;
+  }
+
+  .preset-btn.active {
+    border-color: #C4850A;
+    background: #C4850A;
+    color: #FFF;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .input-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .input-group label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6B6560;
+    min-width: 16px;
+  }
+
+  .input-group input {
+    width: 64px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1.5px solid #D4CFC8;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 14px;
+    color: #2A2520;
+    background: #FAFAF8;
+    text-align: center;
+  }
+
+  .input-group input:focus {
+    outline: none;
+    border-color: #C4850A;
+    box-shadow: 0 0 0 3px rgba(196, 133, 10, 0.12);
+  }
+
+  .canvas-wrap {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(42, 37, 32, 0.10);
+    border: 1px solid #E0DCD6;
+    background: #FFF;
+  }
+
+  canvas { display: block; }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: 'Georgia', serif;
+    font-size: 14px;
+    padding: 9px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .btn-forward {
+    background: #2E7D32;
+    color: #FFF;
+  }
+  .btn-forward:hover:not(:disabled) { background: #256428; }
+
+  .btn-backward {
+    background: #C4850A;
+    color: #FFF;
+  }
+  .btn-backward:hover:not(:disabled) { background: #A97008; }
+
+  .btn-auto {
+    background: #6A4FA0;
+    color: #FFF;
+  }
+  .btn-auto:hover:not(:disabled) { background: #553D87; }
+
+  .btn-reset {
+    background: #E8E4DE;
+    color: #2A2520;
+  }
+  .btn-reset:hover:not(:disabled) { background: #D4CFC8; }
+
+  .formula-bar {
+    min-height: 42px;
+    padding: 10px 14px;
+    background: #2A2520;
+    border-radius: 8px;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 13px;
+    color: #E8E4DE;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .formula-bar .hl-grad {
+    color: #F5C542;
+    font-weight: 700;
+  }
+
+  .formula-bar .hl-val {
+    color: #7ECFB0;
+  }
+
+  .log-scroll {
+    max-height: 420px;
+    overflow-y: auto;
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #4A4540;
+  }
+
+  .log-scroll::-webkit-scrollbar { width: 6px; }
+  .log-scroll::-webkit-scrollbar-thumb { background: #D4CFC8; border-radius: 3px; }
+
+  .log-entry {
+    padding: 4px 0;
+    border-bottom: 1px solid #F0EDE8;
+  }
+
+  .log-entry .step-num {
+    color: #C4850A;
+    font-weight: 700;
+  }
+
+  .log-entry .formula {
+    color: #6A4FA0;
+  }
+
+  .microgpt-note {
+    font-size: 13px;
+    color: #6B6560;
+    line-height: 1.6;
+    text-align: center;
+    max-width: 700px;
+    margin-top: 24px;
+  }
+
+  .microgpt-note code {
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 12px;
+    background: #EDEAE4;
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: #2A2520;
+  }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: #6B6560;
+    margin-top: 4px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+  }
+
+  @media (max-width: 1060px) {
+    .left-col { min-width: 0; width: 100%; }
+    .right-col { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Backpropagation Stepper</h1>
+<p class="subtitle">Watch gradients flow backward through a computation graph</p>
+
+<div class="main-layout">
+  <div class="left-col">
+    <!-- Expression Builder -->
+    <div class="card">
+      <div class="card-title">Expression</div>
+      <div class="preset-row" id="preset-row"></div>
+      <div class="input-row" id="input-row"></div>
+    </div>
+
+    <!-- Graph Canvas -->
+    <div class="canvas-wrap">
+      <canvas id="graph-canvas" width="720" height="380"></canvas>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend" id="legend"></div>
+
+    <!-- Controls -->
+    <div class="btn-row" id="btn-row"></div>
+
+    <!-- Current step formula -->
+    <div class="formula-bar" id="formula-bar">Choose an expression and press Forward to begin.</div>
+  </div>
+
+  <div class="right-col">
+    <!-- Step Log -->
+    <div class="card">
+      <div class="card-title">Backward Pass Log</div>
+      <div class="log-scroll" id="log-scroll"></div>
+    </div>
+  </div>
+</div>
+
+<p class="microgpt-note" id="microgpt-note"></p>
+
+<script>
+(function () {
+  "use strict";
+
+  // ── Colour palette ──
+  var COL = {
+    bg:        "#FFFFFF",
+    leaf:      "#C4850A",
+    leafLight: "#FDF3E0",
+    inter:     "#3B7DD8",
+    interLight:"#E3EEFF",
+    output:    "#C0392B",
+    outputLight:"#FDECEB",
+    edge:      "#A09A94",
+    edgeActive:"#C4850A",
+    gradText:  "#6A4FA0",
+    nodeStroke:"#2A2520",
+    activeGlow:"rgba(196,133,10,0.35)",
+    text:      "#2A2520",
+    gray:      "#B8B2AA"
+  };
+
+  // ── Preset expressions ──
+  var PRESETS = [
+    {
+      label: "Simple: (a \u00d7 b) + c",
+      vars: { a: 2, b: 3, c: 1 },
+      build: function (v) {
+        var a  = mkLeaf("a", v.a);
+        var b  = mkLeaf("b", v.b);
+        var c  = mkLeaf("c", v.c);
+        var ab = mkOp("*", [a, b], function () { return a.val * b.val; },
+                       function (pg) { return [{ node: a, local: b.val }, { node: b, local: a.val }]; });
+        var out = mkOp("+", [ab, c], function () { return ab.val + c.val; },
+                       function (pg) { return [{ node: ab, local: 1 }, { node: c, local: 1 }]; });
+        return { leaves: [a, b, c], nodes: [a, b, c, ab, out], output: out };
+      }
+    },
+    {
+      label: "Chain: (a \u00d7 b + c)\u00b2",
+      vars: { a: 2, b: 3, c: 1 },
+      build: function (v) {
+        var a  = mkLeaf("a", v.a);
+        var b  = mkLeaf("b", v.b);
+        var c  = mkLeaf("c", v.c);
+        var ab = mkOp("*", [a, b], function () { return a.val * b.val; },
+                       function () { return [{ node: a, local: b.val }, { node: b, local: a.val }]; });
+        var s  = mkOp("+", [ab, c], function () { return ab.val + c.val; },
+                       function () { return [{ node: ab, local: 1 }, { node: c, local: 1 }]; });
+        var out = mkOp("\u00b2", [s], function () { return s.val * s.val; },
+                       function () { return [{ node: s, local: 2 * s.val }]; });
+        return { leaves: [a, b, c], nodes: [a, b, c, ab, s, out], output: out };
+      }
+    },
+    {
+      label: "Model-like: \u2212log(softmax)",
+      vars: { a: 2, b: 1 },
+      build: function (v) {
+        var a    = mkLeaf("a", v.a);
+        var b    = mkLeaf("b", v.b);
+        var ea   = mkOp("exp", [a], function () { return Math.exp(a.val); },
+                        function () { return [{ node: a, local: Math.exp(a.val) }]; });
+        var eb   = mkOp("exp", [b], function () { return Math.exp(b.val); },
+                        function () { return [{ node: b, local: Math.exp(b.val) }]; });
+        var sum  = mkOp("+", [ea, eb], function () { return ea.val + eb.val; },
+                        function () { return [{ node: ea, local: 1 }, { node: eb, local: 1 }]; });
+        var div  = mkOp("/", [ea, sum], function () { return ea.val / sum.val; },
+                        function () {
+                          var s2 = sum.val * sum.val;
+                          return [
+                            { node: ea, local: sum.val / s2 },
+                            { node: sum, local: -ea.val / s2 }
+                          ];
+                        });
+        var lg   = mkOp("log", [div], function () { return Math.log(div.val); },
+                        function () { return [{ node: div, local: 1 / div.val }]; });
+        var out  = mkOp("\u2212", [lg], function () { return -lg.val; },
+                        function () { return [{ node: lg, local: -1 }]; });
+        return { leaves: [a, b], nodes: [a, b, ea, eb, sum, div, lg, out], output: out };
+      }
+    }
+  ];
+
+  // ── Node helpers ──
+  function mkLeaf(name, val) {
+    return { id: name, op: null, children: [], val: val, grad: null, isLeaf: true, fwd: null, backward: null, x: 0, y: 0 };
+  }
+
+  function mkOp(op, children, fwd, backward) {
+    var id = op === "\u00b2" ? (children[0].id + "\u00b2") :
+             op === "\u2212" ? ("\u2212" + children[0].id) :
+             op === "exp" ? ("exp(" + children[0].id + ")") :
+             op === "log" ? ("log(" + children[0].id + ")") :
+             ("(" + children.map(function (c) { return c.id; }).join(" " + op + " ") + ")");
+    return { id: id, op: op, children: children, val: null, grad: null, isLeaf: false, fwd: fwd, backward: backward, x: 0, y: 0 };
+  }
+
+  // ── State ──
+  var currentPreset = 0;
+  var graph = null;        // { leaves, nodes, output }
+  var forwardDone = false;
+  var backwardOrder = [];  // reverse-topo non-leaf nodes
+  var backwardIdx = 0;     // index into backwardOrder for next propagation
+  var seeded = false;      // whether the output gradient has been seeded
+  var animatingAuto = false;
+  var autoTimer = null;
+  var stepCount = 0;       // running step counter for the log
+
+  // ── DOM refs ──
+  var presetRow   = document.getElementById("preset-row");
+  var inputRow    = document.getElementById("input-row");
+  var canvas      = document.getElementById("graph-canvas");
+  var ctx         = canvas.getContext("2d");
+  var formulaBar  = document.getElementById("formula-bar");
+  var logScroll   = document.getElementById("log-scroll");
+  var btnRow      = document.getElementById("btn-row");
+  var legendEl    = document.getElementById("legend");
+  var noteEl      = document.getElementById("microgpt-note");
+
+  // ── Build UI ──
+  function buildPresetButtons() {
+    presetRow.textContent = "";
+    PRESETS.forEach(function (p, i) {
+      var btn = document.createElement("button");
+      btn.className = "preset-btn" + (i === currentPreset ? " active" : "");
+      btn.textContent = p.label;
+      btn.addEventListener("click", function () {
+        currentPreset = i;
+        resetAll();
+      });
+      presetRow.appendChild(btn);
+    });
+  }
+
+  function buildInputFields() {
+    inputRow.textContent = "";
+    var vars = PRESETS[currentPreset].vars;
+    Object.keys(vars).forEach(function (k) {
+      var grp = document.createElement("div");
+      grp.className = "input-group";
+      var lbl = document.createElement("label");
+      lbl.textContent = k + " =";
+      var inp = document.createElement("input");
+      inp.type = "number";
+      inp.step = "any";
+      inp.value = vars[k];
+      inp.dataset.varName = k;
+      inp.addEventListener("change", function () {
+        PRESETS[currentPreset].vars[k] = parseFloat(inp.value) || 0;
+        resetAll();
+      });
+      grp.appendChild(lbl);
+      grp.appendChild(inp);
+      inputRow.appendChild(grp);
+    });
+  }
+
+  var btnForward, btnStep, btnAuto, btnReset;
+
+  function buildButtons() {
+    btnRow.textContent = "";
+
+    btnForward = document.createElement("button");
+    btnForward.className = "btn btn-forward";
+    btnForward.textContent = "Forward";
+    btnForward.addEventListener("click", runForward);
+
+    btnStep = document.createElement("button");
+    btnStep.className = "btn btn-backward";
+    btnStep.textContent = "Step Backward";
+    btnStep.addEventListener("click", stepBackward);
+
+    btnAuto = document.createElement("button");
+    btnAuto.className = "btn btn-auto";
+    btnAuto.textContent = "Auto Backward";
+    btnAuto.addEventListener("click", autoBackward);
+
+    btnReset = document.createElement("button");
+    btnReset.className = "btn btn-reset";
+    btnReset.textContent = "Reset";
+    btnReset.addEventListener("click", resetAll);
+
+    btnRow.appendChild(btnForward);
+    btnRow.appendChild(btnStep);
+    btnRow.appendChild(btnAuto);
+    btnRow.appendChild(btnReset);
+
+    syncButtons();
+  }
+
+  function buildLegend() {
+    legendEl.textContent = "";
+    var items = [
+      { color: COL.leafLight, border: COL.leaf, label: "Input (leaf)" },
+      { color: COL.interLight, border: COL.inter, label: "Intermediate" },
+      { color: COL.outputLight, border: COL.output, label: "Output" }
+    ];
+    items.forEach(function (it) {
+      var el = document.createElement("span");
+      el.className = "legend-item";
+      var dot = document.createElement("span");
+      dot.className = "legend-dot";
+      dot.style.background = it.color;
+      dot.style.border = "2px solid " + it.border;
+      var txt = document.createTextNode(it.label);
+      el.appendChild(dot);
+      el.appendChild(txt);
+      legendEl.appendChild(el);
+    });
+  }
+
+  function buildNote() {
+    noteEl.textContent = "";
+    var t1 = document.createTextNode("This is exactly what ");
+    var c1 = document.createElement("code");
+    c1.textContent = "microgpt.py:95\u201397";
+    var t2 = document.createTextNode(" does. The line ");
+    var c2 = document.createElement("code");
+    c2.textContent = "child.grad += local_grad * v.grad";
+    var t3 = document.createTextNode(" is one step of this visualization.");
+    noteEl.appendChild(t1);
+    noteEl.appendChild(c1);
+    noteEl.appendChild(t2);
+    noteEl.appendChild(c2);
+    noteEl.appendChild(t3);
+  }
+
+  function syncButtons() {
+    var backwardComplete = seeded && backwardIdx >= backwardOrder.length;
+    btnForward.disabled = forwardDone;
+    btnStep.disabled = !forwardDone || backwardComplete;
+    btnAuto.disabled = !forwardDone || backwardComplete || animatingAuto;
+    btnReset.disabled = false;
+  }
+
+  // ── Graph building ──
+  function buildGraph() {
+    var preset = PRESETS[currentPreset];
+    graph = preset.build(preset.vars);
+    // Build backward order: reverse of topological sort, non-leaf only.
+    // The forward topoSort goes leaves-first -> output-last,
+    // so reversing gives output-first, which is what backprop needs.
+    // We keep only non-leaf nodes because leaves receive gradients
+    // but never propagate them further.
+    var fwdTopo = topoSort();
+    backwardOrder = [];
+    for (var i = fwdTopo.length - 1; i >= 0; i--) {
+      if (!fwdTopo[i].isLeaf) {
+        backwardOrder.push(fwdTopo[i]);
+      }
+    }
+    layoutGraph();
+  }
+
+  // ── Layout ──
+  function layoutGraph() {
+    // Assign depth (longest path from leaves)
+    var depth = {};
+    function getDepth(n) {
+      if (depth[n.id] !== undefined) return depth[n.id];
+      if (n.children.length === 0) { depth[n.id] = 0; return 0; }
+      var mx = 0;
+      for (var i = 0; i < n.children.length; i++) {
+        mx = Math.max(mx, getDepth(n.children[i]) + 1);
+      }
+      depth[n.id] = mx;
+      return mx;
+    }
+    getDepth(graph.output);
+
+    var maxDepth = depth[graph.output.id];
+
+    // Group by depth
+    var layers = {};
+    graph.nodes.forEach(function (n) {
+      var d = depth[n.id];
+      if (!layers[d]) layers[d] = [];
+      layers[d].push(n);
+    });
+
+    var W = canvas.width;
+    var H = canvas.height;
+    var nodeCount = graph.nodes.length;
+    var padX = nodeCount > 6 ? 60 : 80;
+    var padY = 50;
+    var layerW = maxDepth > 0 ? (W - 2 * padX) / maxDepth : 0;
+
+    for (var d = 0; d <= maxDepth; d++) {
+      var arr = layers[d] || [];
+      var layerH = arr.length > 1 ? (H - 2 * padY) / (arr.length - 1) : 0;
+      for (var i = 0; i < arr.length; i++) {
+        arr[i].x = padX + d * layerW;
+        arr[i].y = arr.length === 1 ? H / 2 : padY + i * layerH;
+      }
+    }
+  }
+
+  // ── Drawing ──
+  var NODE_W = 104;
+  var NODE_H = 58;
+
+  function nodeColor(n) {
+    if (n === graph.output) return { fill: COL.outputLight, stroke: COL.output };
+    if (n.isLeaf) return { fill: COL.leafLight, stroke: COL.leaf };
+    return { fill: COL.interLight, stroke: COL.inter };
+  }
+
+  function drawGraph(activeNode, activeChildren) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = COL.bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Edges
+    graph.nodes.forEach(function (n) {
+      n.children.forEach(function (child) {
+        var isActive = activeNode === n && activeChildren && activeChildren.indexOf(child) !== -1;
+        drawEdge(child, n, isActive);
+      });
+    });
+
+    // Nodes
+    graph.nodes.forEach(function (n) {
+      var isActive = (n === activeNode);
+      var isTarget = activeChildren && activeChildren.indexOf(n) !== -1;
+      drawNode(n, isActive, isTarget);
+    });
+  }
+
+  function drawEdge(from, to, active) {
+    var x1 = from.x + NODE_W / 2;
+    var y1 = from.y;
+    var x2 = to.x - NODE_W / 2;
+    var y2 = to.y;
+
+    ctx.save();
+    ctx.strokeStyle = active ? COL.edgeActive : COL.edge;
+    ctx.lineWidth = active ? 3 : 1.5;
+    ctx.setLineDash(active ? [] : []);
+    ctx.beginPath();
+
+    // Bezier curve
+    var cx = (x1 + x2) / 2;
+    ctx.moveTo(x1, y1);
+    ctx.bezierCurveTo(cx, y1, cx, y2, x2, y2);
+    ctx.stroke();
+
+    // Arrowhead
+    var angle = Math.atan2(y2 - y1, x2 - cx);
+    var ax = x2 - 2;
+    var ay = y2;
+    ctx.fillStyle = active ? COL.edgeActive : COL.edge;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(ax - 8, ay - 4);
+    ctx.lineTo(ax - 8, ay + 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawNode(n, isActive, isTarget) {
+    var x = n.x - NODE_W / 2;
+    var y = n.y - NODE_H / 2;
+    var col = nodeColor(n);
+
+    ctx.save();
+
+    // Glow for active
+    if (isActive || isTarget) {
+      ctx.shadowColor = isActive ? COL.activeGlow : "rgba(106,79,160,0.3)";
+      ctx.shadowBlur = 16;
+    }
+
+    // Rounded rect
+    var r = 10;
+    ctx.fillStyle = col.fill;
+    ctx.strokeStyle = (isActive || isTarget) ? (isActive ? COL.leaf : COL.gradText) : col.stroke;
+    ctx.lineWidth = (isActive || isTarget) ? 2.5 : 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + NODE_W - r, y);
+    ctx.quadraticCurveTo(x + NODE_W, y, x + NODE_W, y + r);
+    ctx.lineTo(x + NODE_W, y + NODE_H - r);
+    ctx.quadraticCurveTo(x + NODE_W, y + NODE_H, x + NODE_W - r, y + NODE_H);
+    ctx.lineTo(x + r, y + NODE_H);
+    ctx.quadraticCurveTo(x, y + NODE_H, x, y + NODE_H - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Label (op or name)
+    var label = n.isLeaf ? n.id : n.op;
+    ctx.fillStyle = col.stroke;
+    ctx.font = "bold 14px Georgia, serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Value
+    var hasVal = n.val !== null;
+    var hasGrad = n.grad !== null;
+
+    if (hasVal && hasGrad) {
+      // Three rows: label, val, grad
+      ctx.fillText(label, n.x, n.y - 16);
+      ctx.font = "13px Menlo, Consolas, monospace";
+      ctx.fillStyle = COL.text;
+      ctx.fillText(fmt(n.val), n.x, n.y + 2);
+      ctx.fillStyle = COL.gradText;
+      ctx.font = "bold 12px Menlo, Consolas, monospace";
+      ctx.fillText("\u2207 " + fmt(n.grad), n.x, n.y + 19);
+    } else if (hasVal) {
+      // Two rows: label, val
+      ctx.fillText(label, n.x, n.y - 10);
+      ctx.font = "13px Menlo, Consolas, monospace";
+      ctx.fillStyle = COL.text;
+      ctx.fillText(fmt(n.val), n.x, n.y + 10);
+    } else {
+      // Just label
+      ctx.fillText(label, n.x, n.y - 6);
+      ctx.font = "12px Menlo, Consolas, monospace";
+      ctx.fillStyle = COL.gray;
+      ctx.fillText("---", n.x, n.y + 12);
+    }
+
+    ctx.restore();
+  }
+
+  function fmt(v) {
+    if (v === null || v === undefined) return "---";
+    if (Number.isInteger(v)) return String(v);
+    var s = v.toFixed(4);
+    // Trim trailing zeros but keep at least 2 decimals
+    s = s.replace(/0+$/, "");
+    if (s.indexOf(".") !== -1 && s.length - s.indexOf(".") < 3) {
+      s = v.toFixed(2);
+    }
+    return s;
+  }
+
+  // ── Forward pass ──
+  function runForward() {
+    if (forwardDone) return;
+
+    // Compute values in topological order (leaves first)
+    var topo = topoSort();
+    var step = 0;
+    var total = topo.length;
+
+    function animateStep() {
+      if (step >= total) {
+        forwardDone = true;
+        syncButtons();
+        setFormula("Forward pass complete. Output = " + fmt(graph.output.val) + ". Press Step Backward to begin.");
+        drawGraph(null, null);
+        return;
+      }
+      var n = topo[step];
+      if (!n.isLeaf) {
+        n.val = n.fwd();
+      }
+      drawGraph(n, null);
+      step++;
+      setTimeout(animateStep, 350);
+    }
+
+    animateStep();
+  }
+
+  function topoSort() {
+    // Kahn's algorithm
+    var inDeg = {};
+    var children_of = {};
+    graph.nodes.forEach(function (n) {
+      inDeg[n.id] = 0;
+      children_of[n.id] = [];
+    });
+    graph.nodes.forEach(function (n) {
+      n.children.forEach(function (c) {
+        children_of[c.id].push(n);
+        inDeg[n.id]++;
+      });
+    });
+    var queue = [];
+    graph.nodes.forEach(function (n) {
+      if (inDeg[n.id] === 0) queue.push(n);
+    });
+    var sorted = [];
+    while (queue.length) {
+      var n = queue.shift();
+      sorted.push(n);
+      children_of[n.id].forEach(function (parent) {
+        inDeg[parent.id]--;
+        if (inDeg[parent.id] === 0) queue.push(parent);
+      });
+    }
+    return sorted;
+  }
+
+  // ── Backward pass ──
+  function stepBackward() {
+    if (!forwardDone) return;
+    var backwardComplete = seeded && backwardIdx >= backwardOrder.length;
+    if (backwardComplete) return;
+
+    // Step 1: Seed the output gradient
+    if (!seeded) {
+      seeded = true;
+      stepCount++;
+      graph.output.grad = 1;
+      addLogEntry(stepCount, graph.output.id + ".grad = 1 (seed)");
+      setFormulaSpans([
+        { text: graph.output.id + ".grad = ", cls: "" },
+        { text: "1", cls: "hl-grad" },
+        { text: "  (seed the output gradient)", cls: "" }
+      ]);
+      drawGraph(graph.output, null);
+      syncButtons();
+      return;
+    }
+
+    // Subsequent steps: propagate from the current node
+    var n = backwardOrder[backwardIdx];
+    var pairs = n.backward();
+    var activeChildren = [];
+    var logParts = [];
+    var formulaParts = [{ text: "Processing " + n.op + " node:  ", cls: "" }];
+
+    pairs.forEach(function (p, idx) {
+      if (p.node.grad === null) p.node.grad = 0;
+      var contrib = p.local * n.grad;
+      p.node.grad += contrib;
+      activeChildren.push(p.node);
+
+      var piece = p.node.id + ".grad += " + fmt(p.local) + " \u00d7 " + fmt(n.grad) + " = " + fmt(contrib);
+      logParts.push(piece);
+
+      if (idx > 0) formulaParts.push({ text: ",  ", cls: "" });
+      formulaParts.push({ text: p.node.id + ".grad", cls: "hl-grad" });
+      formulaParts.push({ text: " += " + fmt(p.local) + " \u00d7 " + fmt(n.grad) + " = ", cls: "" });
+      formulaParts.push({ text: fmt(contrib), cls: "hl-val" });
+    });
+
+    stepCount++;
+    addLogEntry(stepCount, "Processing " + n.op + " node \u2192 " + logParts.join(", "));
+    setFormulaSpans(formulaParts);
+    drawGraph(n, activeChildren);
+
+    backwardIdx++;
+    syncButtons();
+  }
+
+  function autoBackward() {
+    if (animatingAuto) return;
+    animatingAuto = true;
+    syncButtons();
+
+    function tick() {
+      if (seeded && backwardIdx >= backwardOrder.length) {
+        animatingAuto = false;
+        syncButtons();
+        return;
+      }
+      stepBackward();
+      autoTimer = setTimeout(tick, 800);
+    }
+    tick();
+  }
+
+  // ── Formula bar helpers ──
+  function setFormula(text) {
+    formulaBar.textContent = text;
+  }
+
+  function setFormulaSpans(parts) {
+    formulaBar.textContent = "";
+    parts.forEach(function (p) {
+      var span = document.createElement("span");
+      if (p.cls) span.className = p.cls;
+      span.textContent = p.text;
+      formulaBar.appendChild(span);
+    });
+  }
+
+  // ── Log helpers ──
+  function clearLog() {
+    logScroll.textContent = "";
+  }
+
+  function addLogEntry(stepNum, text) {
+    var div = document.createElement("div");
+    div.className = "log-entry";
+    var stepSpan = document.createElement("span");
+    stepSpan.className = "step-num";
+    stepSpan.textContent = "Step " + stepNum + ": ";
+    var textNode = document.createTextNode(text);
+    div.appendChild(stepSpan);
+    div.appendChild(textNode);
+    logScroll.appendChild(div);
+    logScroll.scrollTop = logScroll.scrollHeight;
+  }
+
+  // ── Reset ──
+  function resetAll() {
+    if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
+    animatingAuto = false;
+    forwardDone = false;
+    backwardIdx = 0;
+    seeded = false;
+    stepCount = 0;
+    clearLog();
+
+    buildPresetButtons();
+    buildInputFields();
+    buildGraph();
+    drawGraph(null, null);
+    setFormula("Choose an expression and press Forward to begin.");
+    syncButtons();
+  }
+
+  // ── Init ──
+  buildButtons();
+  buildLegend();
+  buildNote();
+  resetAll();
+
+})();
+</script>
+</body>
+</html>

@@ -292,4 +292,14 @@ The model discovers these patterns on its own through training. Nobody programs 
 
 The key takeaway: multi-head attention lets the model look at the same sequence from multiple angles simultaneously. One head might focus on "what letter was right before me?" while another focuses on "what letter started this name?" Together they give the model a richer understanding of context than any single attention pattern could.
 
+
+---
+
+> **Lab 14: One vs Four Heads** — Compare 1, 4, and 16 attention heads. See the effect of specialization.
+>
+> ```bash
+> cd labs && python3 lab14_one_vs_four_heads.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 15](./15-full-forward-pass.md)

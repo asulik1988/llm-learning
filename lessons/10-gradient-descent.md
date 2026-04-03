@@ -54,6 +54,10 @@ Either way, subtracting the gradient moves us toward lower loss.
 
 ## A Concrete Example
 
+**Try it yourself:** Click to place a starting point, adjust the learning rate, and watch gradient descent converge (or diverge).
+
+[Gradient Descent Sandbox](./interactive/gradient-descent.html)
+
 Say we have one parameter:
 
 ```
@@ -234,4 +238,14 @@ Compute the gradient (which way is uphill), then step the opposite way (downhill
 > 5. **Reset gradients** (`p.grad = 0`) after each step, because backward accumulates with `+=`
 > 6. Loss decreases from ~`3.4` to ~`2.0` over 1,000 steps -- the model is learning
 
+
+---
+
+> **Lab 10: Learning Rate Explorer** — Try plain gradient descent with different step sizes. Too small, just right, and way too big.
+>
+> ```bash
+> cd labs && python3 lab10_learning_rate_explorer.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 11](./11-adam.md)

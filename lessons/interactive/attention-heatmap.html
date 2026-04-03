@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attention Heatmap Visualizer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: #F7F5F0;
+    color: #2A2520;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #2A2520;
+    text-align: center;
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 1.1rem;
+    color: #6B6560;
+    margin-bottom: 2rem;
+    font-style: italic;
+  }
+
+  /* --- Input area --- */
+  .input-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .name-input {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 1.25rem;
+    padding: 0.6rem 1rem;
+    border: 2px solid #D5D0C8;
+    border-radius: 8px;
+    background: #FFFFFF;
+    color: #2A2520;
+    width: 200px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .name-input:focus {
+    border-color: #C4850A;
+  }
+
+  .name-input::placeholder {
+    color: #B5B0A8;
+  }
+
+  .btn {
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.6rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  .btn-primary {
+    background: #C4850A;
+    color: #FFFFFF;
+  }
+
+  .btn-primary:hover {
+    background: #A87008;
+  }
+
+  .presets {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .presets-label {
+    font-size: 0.85rem;
+    color: #8A857E;
+    align-self: center;
+    margin-right: 0.25rem;
+  }
+
+  .btn-preset {
+    background: #EDEAE4;
+    color: #5A5550;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.9rem;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+  }
+
+  .btn-preset:hover {
+    background: #E0DCD4;
+    color: #2A2520;
+  }
+
+  /* --- Heatmap grid layout --- */
+  .heatmaps {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+  }
+
+  @media (max-width: 700px) {
+    .heatmaps { grid-template-columns: 1fr; }
+  }
+
+  .head-card {
+    background: #FFFFFF;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 4px rgba(42,37,32,0.08);
+  }
+
+  .head-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #C4850A;
+    margin-bottom: 0.15rem;
+  }
+
+  .head-desc {
+    font-size: 0.8rem;
+    color: #8A857E;
+    margin-bottom: 0.9rem;
+    font-style: italic;
+  }
+
+  /* --- Heatmap table --- */
+  .heatmap-wrapper {
+    overflow-x: auto;
+  }
+
+  .heatmap-table {
+    border-collapse: collapse;
+    margin: 0 auto;
+  }
+
+  .heatmap-table th,
+  .heatmap-table td {
+    width: 38px;
+    height: 38px;
+    text-align: center;
+    vertical-align: middle;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.75rem;
+    border: 1px solid #EDEAE4;
+  }
+
+  .heatmap-table th {
+    font-weight: 600;
+    color: #6B6560;
+    background: #FAF9F6;
+    font-size: 0.82rem;
+  }
+
+  .heatmap-table .corner-cell {
+    background: #FAF9F6;
+    border-color: #FAF9F6;
+  }
+
+  .heatmap-table .col-header {
+    border-bottom: 2px solid #D5D0C8;
+  }
+
+  .heatmap-table .row-header {
+    border-right: 2px solid #D5D0C8;
+    padding: 0 6px;
+  }
+
+  .heatmap-cell {
+    position: relative;
+    cursor: default;
+    transition: outline 0.15s;
+    font-size: 0.65rem;
+    color: rgba(42,37,32,0.55);
+    line-height: 1;
+  }
+
+  .heatmap-cell:hover {
+    outline: 2px solid #C4850A;
+    outline-offset: -1px;
+    z-index: 1;
+  }
+
+  .heatmap-cell .weight-label {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .masked-cell {
+    background: #F2F0EB;
+    color: transparent;
+  }
+
+  /* Column header label */
+  .axis-label {
+    font-size: 0.7rem;
+    color: #8A857E;
+    text-align: center;
+    margin-bottom: 0.35rem;
+    font-style: italic;
+  }
+
+  .row-axis-label {
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    font-size: 0.7rem;
+    color: #8A857E;
+    font-style: italic;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .heatmap-with-axis {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0;
+  }
+
+  /* --- Tooltip --- */
+  .tooltip {
+    position: fixed;
+    background: #2A2520;
+    color: #F7F5F0;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 100;
+    white-space: nowrap;
+  }
+
+  .tooltip.visible {
+    opacity: 1;
+  }
+
+  /* --- Insight panel --- */
+  .insight-panel {
+    background: #FFFFFF;
+    border-left: 4px solid #C4850A;
+    border-radius: 0 10px 10px 0;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.7;
+    font-size: 0.95rem;
+    color: #3A3530;
+  }
+
+  .insight-panel strong {
+    color: #C4850A;
+  }
+
+  /* --- Legend --- */
+  .legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    font-size: 0.8rem;
+    color: #6B6560;
+  }
+
+  .legend-bar {
+    width: 180px;
+    height: 14px;
+    border-radius: 4px;
+    border: 1px solid #D5D0C8;
+  }
+
+  /* --- Empty state --- */
+  .empty-state {
+    text-align: center;
+    color: #A8A39C;
+    font-style: italic;
+    padding: 4rem 1rem;
+    font-size: 1.05rem;
+  }
+
+  /* --- Causal mask note --- */
+  .mask-note {
+    text-align: center;
+    font-size: 0.82rem;
+    color: #8A857E;
+    margin-bottom: 1.5rem;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Attention Heatmap</h1>
+  <p class="subtitle">See which tokens each position pays attention to</p>
+
+  <div class="input-area">
+    <div class="input-row">
+      <input type="text" class="name-input" id="nameInput" maxlength="8"
+             placeholder="type a name..." spellcheck="false" autocomplete="off">
+      <button class="btn btn-primary" id="vizBtn">Visualize</button>
+    </div>
+    <div class="presets">
+      <span class="presets-label">Try:</span>
+      <button class="btn btn-preset" data-name="anna">anna</button>
+      <button class="btn btn-preset" data-name="james">james</button>
+      <button class="btn btn-preset" data-name="elizabeth">elizabeth</button>
+    </div>
+  </div>
+
+  <div id="output">
+    <div class="empty-state" id="emptyState">
+      Type a name above and press Visualize to see attention patterns.
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // --- DOM refs ---
+  var nameInput = document.getElementById("nameInput");
+  var vizBtn = document.getElementById("vizBtn");
+  var output = document.getElementById("output");
+  var emptyState = document.getElementById("emptyState");
+  var tooltip = document.getElementById("tooltip");
+
+  // --- Head definitions ---
+  var heads = [
+    {
+      name: "Head 0: Previous Token",
+      desc: "Strongly attends to the token immediately before",
+      score: function (queryPos, keyPos, tokens) {
+        if (keyPos === queryPos - 1) return 5.0;
+        if (keyPos === queryPos - 2) return 1.5;
+        return 0.2;
+      }
+    },
+    {
+      name: "Head 1: First Token",
+      desc: "Anchors back to the beginning-of-sequence token",
+      score: function (queryPos, keyPos, tokens) {
+        if (keyPos === 0) return 5.0;
+        if (keyPos === 1) return 1.2;
+        return 0.3;
+      }
+    },
+    {
+      name: "Head 2: Self",
+      desc: "Each position mostly attends to itself",
+      score: function (queryPos, keyPos, tokens) {
+        if (keyPos === queryPos) return 5.5;
+        var dist = Math.abs(queryPos - keyPos);
+        return Math.max(0.2, 1.5 - dist * 0.4);
+      }
+    },
+    {
+      name: "Head 3: Vowel Tracker",
+      desc: "Attends more strongly to vowel characters",
+      score: function (queryPos, keyPos, tokens) {
+        var vowels = "aeiouAEIOU";
+        var tok = tokens[keyPos];
+        var isVowel = vowels.indexOf(tok) !== -1;
+        if (isVowel) return 3.5;
+        if (tok === "<BOS>") return 1.0;
+        return 0.5;
+      }
+    }
+  ];
+
+  // --- Softmax ---
+  function softmax(logits) {
+    var maxVal = -Infinity;
+    for (var i = 0; i < logits.length; i++) {
+      if (logits[i] > maxVal) maxVal = logits[i];
+    }
+    var exps = [];
+    var sum = 0;
+    for (var i = 0; i < logits.length; i++) {
+      var e = Math.exp(logits[i] - maxVal);
+      exps.push(e);
+      sum += e;
+    }
+    var result = [];
+    for (var i = 0; i < exps.length; i++) {
+      result.push(exps[i] / sum);
+    }
+    return result;
+  }
+
+  // --- Compute attention for one head ---
+  function computeHead(headDef, tokens) {
+    var n = tokens.length;
+    var weights = [];
+    for (var q = 0; q < n; q++) {
+      var logits = [];
+      for (var k = 0; k <= q; k++) {
+        logits.push(headDef.score(q, k, tokens));
+      }
+      var row = softmax(logits);
+      weights.push(row);
+    }
+    return weights;
+  }
+
+  // --- Color interpolation: white to deep amber/brown ---
+  function weightToColor(w) {
+    // 0 -> #FFFFFF, 1 -> #7A4A02 (deep amber-brown)
+    var r0 = 255, g0 = 255, b0 = 255;
+    var r1 = 122, g1 = 74,  b1 = 2;
+    var t = Math.pow(w, 0.7); // slight curve for better visual spread
+    var r = Math.round(r0 + (r1 - r0) * t);
+    var g = Math.round(g0 + (g1 - g0) * t);
+    var b = Math.round(b0 + (b1 - b0) * t);
+    return "rgb(" + r + "," + g + "," + b + ")";
+  }
+
+  function weightToTextColor(w) {
+    return w > 0.45 ? "rgba(255,255,255,0.9)" : "rgba(42,37,32,0.55)";
+  }
+
+  // --- Build gradient for legend ---
+  function buildLegendGradient() {
+    var stops = [];
+    for (var i = 0; i <= 10; i++) {
+      stops.push(weightToColor(i / 10) + " " + (i * 10) + "%");
+    }
+    return "linear-gradient(to right," + stops.join(",") + ")";
+  }
+
+  // --- Build one heatmap card ---
+  function buildHeadCard(headDef, weights, tokens) {
+    var n = tokens.length;
+    var card = document.createElement("div");
+    card.className = "head-card";
+
+    var title = document.createElement("div");
+    title.className = "head-title";
+    title.textContent = headDef.name;
+    card.appendChild(title);
+
+    var desc = document.createElement("div");
+    desc.className = "head-desc";
+    desc.textContent = headDef.desc;
+    card.appendChild(desc);
+
+    // Axis label for columns
+    var colLabel = document.createElement("div");
+    colLabel.className = "axis-label";
+    colLabel.textContent = "attending to \u2192";
+    card.appendChild(colLabel);
+
+    var axisWrap = document.createElement("div");
+    axisWrap.className = "heatmap-with-axis";
+
+    // Row axis label
+    var rowLabel = document.createElement("div");
+    rowLabel.className = "row-axis-label";
+    rowLabel.textContent = "from position \u2192";
+    axisWrap.appendChild(rowLabel);
+
+    var wrapper = document.createElement("div");
+    wrapper.className = "heatmap-wrapper";
+
+    var table = document.createElement("table");
+    table.className = "heatmap-table";
+
+    // Header row
+    var thead = document.createElement("thead");
+    var headerRow = document.createElement("tr");
+
+    var corner = document.createElement("th");
+    corner.className = "corner-cell";
+    headerRow.appendChild(corner);
+
+    for (var k = 0; k < n; k++) {
+      var th = document.createElement("th");
+      th.className = "col-header";
+      th.textContent = tokens[k];
+      headerRow.appendChild(th);
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Body rows
+    var tbody = document.createElement("tbody");
+    for (var q = 0; q < n; q++) {
+      var tr = document.createElement("tr");
+
+      // Row header
+      var rh = document.createElement("th");
+      rh.className = "row-header";
+      rh.textContent = tokens[q];
+      tr.appendChild(rh);
+
+      for (var k = 0; k < n; k++) {
+        var td = document.createElement("td");
+
+        if (k > q) {
+          // Masked (future token)
+          td.className = "masked-cell";
+        } else {
+          var w = weights[q][k];
+          td.className = "heatmap-cell";
+          td.style.background = weightToColor(w);
+          td.style.color = weightToTextColor(w);
+
+          var label = document.createElement("span");
+          label.className = "weight-label";
+          if (w >= 0.995) {
+            label.textContent = "1.0";
+          } else if (w < 0.005) {
+            label.textContent = "";
+          } else {
+            var pct = Math.round(w * 100);
+            label.textContent = "." + (pct < 10 ? "0" + pct : pct);
+          }
+          td.appendChild(label);
+
+          // Tooltip data
+          (function (td, q, k, w, tokens) {
+            td.addEventListener("mouseenter", function (e) {
+              tooltip.textContent = tokens[q] + " \u2192 " + tokens[k] + ": " + w.toFixed(3);
+              tooltip.classList.add("visible");
+              positionTooltip(e);
+            });
+            td.addEventListener("mousemove", positionTooltip);
+            td.addEventListener("mouseleave", function () {
+              tooltip.classList.remove("visible");
+            });
+          })(td, q, k, w, tokens);
+        }
+
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    wrapper.appendChild(table);
+    axisWrap.appendChild(wrapper);
+    card.appendChild(axisWrap);
+
+    return card;
+  }
+
+  function positionTooltip(e) {
+    var tx = e.clientX + 12;
+    var ty = e.clientY - 32;
+    if (tx + 180 > window.innerWidth) tx = e.clientX - 180;
+    if (ty < 4) ty = e.clientY + 16;
+    tooltip.style.left = tx + "px";
+    tooltip.style.top = ty + "px";
+  }
+
+  // --- Main visualize ---
+  function visualize(name) {
+    name = name.trim().toLowerCase();
+    if (name.length === 0) return;
+
+    // Tokenize: <BOS> + individual characters
+    var tokens = ["BOS"];
+    for (var i = 0; i < name.length; i++) {
+      tokens.push(name[i]);
+    }
+
+    // Clear output
+    while (output.firstChild) {
+      output.removeChild(output.firstChild);
+    }
+
+    // Mask note
+    var maskNote = document.createElement("div");
+    maskNote.className = "mask-note";
+    maskNote.textContent = "Gray cells are masked \u2014 each token can only attend to itself and earlier positions (causal masking).";
+    output.appendChild(maskNote);
+
+    // Legend
+    var legend = document.createElement("div");
+    legend.className = "legend";
+
+    var lowLabel = document.createElement("span");
+    lowLabel.textContent = "0";
+    legend.appendChild(lowLabel);
+
+    var bar = document.createElement("div");
+    bar.className = "legend-bar";
+    bar.style.background = buildLegendGradient();
+    legend.appendChild(bar);
+
+    var highLabel = document.createElement("span");
+    highLabel.textContent = "1";
+    legend.appendChild(highLabel);
+
+    var legendCaption = document.createElement("span");
+    legendCaption.textContent = "  attention weight";
+    legendCaption.style.marginLeft = "0.3rem";
+    legend.appendChild(legendCaption);
+
+    output.appendChild(legend);
+
+    // Heatmaps grid
+    var grid = document.createElement("div");
+    grid.className = "heatmaps";
+
+    for (var h = 0; h < heads.length; h++) {
+      var weights = computeHead(heads[h], tokens);
+      var card = buildHeadCard(heads[h], weights, tokens);
+      grid.appendChild(card);
+    }
+
+    output.appendChild(grid);
+
+    // Insight panel
+    var insight = document.createElement("div");
+    insight.className = "insight-panel";
+
+    var p1 = document.createElement("p");
+    p1.style.marginBottom = "0.6rem";
+    var s1 = document.createElement("strong");
+    s1.textContent = "Key Insight: ";
+    p1.appendChild(s1);
+    p1.appendChild(document.createTextNode(
+      "Each head learns a different attention pattern. Head 0 tracks what came immediately before. Head 1 always looks back at how the name started. Head 2 focuses on the current position. Head 3 scans for vowels across the sequence."
+    ));
+    insight.appendChild(p1);
+
+    var p2 = document.createElement("p");
+    p2.appendChild(document.createTextNode(
+      "In microgpt, these patterns emerge from training \u2014 they aren't programmed. The model discovers on its own that different heads should specialize in different ways, because together they capture richer relationships between tokens."
+    ));
+    insight.appendChild(p2);
+
+    output.appendChild(insight);
+  }
+
+  // --- Events ---
+  vizBtn.addEventListener("click", function () {
+    visualize(nameInput.value);
+  });
+
+  nameInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      visualize(nameInput.value);
+    }
+  });
+
+  var presetBtns = document.querySelectorAll(".btn-preset");
+  for (var i = 0; i < presetBtns.length; i++) {
+    presetBtns[i].addEventListener("click", function () {
+      var name = this.getAttribute("data-name");
+      nameInput.value = name;
+      visualize(name);
+    });
+  }
+})();
+</script>
+</body>
+</html>

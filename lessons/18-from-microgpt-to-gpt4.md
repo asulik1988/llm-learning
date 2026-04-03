@@ -6,26 +6,30 @@ Previous: [Lesson 17](./17-experiments.md)
 
 ## The Punchline
 
-Everything in GPT-4, Claude, and every other modern large language model is the same architecture you just learned in microgpt. The same attention mechanism. The same MLP blocks. The same embeddings, softmax, backpropagation, and Adam optimizer. All of it.
+Every modern large language model -- GPT-4, Claude, Llama -- is built on the same core ideas you just learned in microgpt. Attention over past tokens. MLP blocks that transform representations. Learned embeddings. Softmax probabilities. Backpropagation. Adam. The fundamentals are the same.
 
-The difference is scale. microgpt is a toy. GPT-4 is that same toy, manufactured at industrial scale.
+The details differ: real models use techniques like grouped-query attention, rotary positional embeddings (RoPE), and SwiGLU activations instead of ReLU. But the conceptual architecture -- embed, attend, transform, predict -- is what you already understand.
+
+The biggest difference is scale. microgpt is a toy. GPT-4 is that same idea, manufactured at industrial scale.
 
 This lesson maps what you learned onto the real models, shows what changes at scale and what stays exactly the same, and closes with why this simple recipe -- "predict the next token" -- produces something that looks like intelligence.
 
 ## The Scale Comparison
 
-| | microgpt | GPT-2 | GPT-3 | GPT-4 (estimated) |
-|---|---------|-------|-------|-------------------|
-| **Parameters** | `4,192` | `124,000,000` | `175,000,000,000` | `~1,800,000,000,000` |
-| **Layers** | `1` | `12` | `96` | `~120` |
-| **Embedding dim** | `16` | `768` | `12,288` | `~12,000+` |
-| **Attention heads** | `4` | `12` | `96` | `~100+` |
+| | microgpt | GPT-2 | GPT-3 | GPT-4 |
+|---|---------|-------|-------|-------|
+| **Parameters** | `4,192` | `124,000,000` | `175,000,000,000` | Not disclosed |
+| **Layers** | `1` | `12` | `96` | Not disclosed |
+| **Embedding dim** | `16` | `768` | `12,288` | Not disclosed |
+| **Attention heads** | `4` | `12` | `96` | Not disclosed |
 | **Vocab size** | `27` | `50,257` | `50,257` | `~100,000` |
 | **Context length** | `16` | `1,024` | `2,048` | `128,000+` |
-| **Training data** | `32K names` | `40 GB text` | `570 GB text` | `~13 trillion tokens` |
-| **Training hardware** | `1 CPU, minutes` | `8 GPUs, days` | `thousands of GPUs, months` | `tens of thousands of GPUs, months` |
+| **Training data** | `32K names` | `40 GB text` | `570 GB text` | Not disclosed |
+| **Training hardware** | `1 CPU, minutes` | `8 GPUs, days` | `thousands of GPUs, months` | Not disclosed |
 
-microgpt has 4,192 parameters. GPT-4 has roughly 1.8 trillion. That is a factor of about 400 billion. Yet the fundamental structure is the same: tokens go in, embeddings look them up, attention selects context, MLPs transform, and logits predict the next token.
+> **Note:** OpenAI's [GPT-4 technical report](https://cdn.openai.com/papers/gpt-4.pdf) explicitly withholds architecture details, model size, training compute, and dataset information. Widely-circulated numbers (1.8T parameters, MoE with 8 experts, etc.) are unconfirmed rumors, not official figures. GPT-2 and GPT-3 numbers above come from their published papers.
+
+microgpt has 4,192 parameters. GPT-3 has 175 billion -- a factor of about 40 million. GPT-4 is believed to be substantially larger still. Yet the fundamental structure is the same: tokens go in, embeddings look them up, attention selects context, MLPs transform, and logits predict the next token.
 
 ## What Changes at Scale
 
@@ -62,7 +66,7 @@ Repeated 96 times. Each layer has its own weight matrices, so each can learn dif
 - **Middle layers** tend to learn semantic relationships (meaning, context)
 - **Later layers** tend to learn task-specific patterns (answering questions, following instructions)
 
-But fundamentally, each layer is doing exactly what `microgpt.py:144-176` does. Normalize, attend, project, residual, normalize, expand, ReLU, compress, residual.
+The core pattern in each layer is the same as `microgpt.py:144-176`: normalize, attend, project, residual, normalize, feed-forward, residual. Real models swap in different components (SwiGLU instead of ReLU, grouped-query attention instead of standard multi-head, RoPE instead of learned positional embeddings), but the overall structure is recognizable.
 
 ### 3. Much Larger Embeddings
 
@@ -93,9 +97,9 @@ This is how a model goes from "predict the next token" to "be a helpful, harmles
 
 ### 6. Mixture of Experts
 
-Some large models (like GPT-4, reportedly) use a technique called **Mixture of Experts (MoE)**. Instead of one large MLP in each layer, there are several "expert" MLPs. A small routing network decides which expert(s) to use for each token.
+Some large models use a technique called **Mixture of Experts (MoE)**. Instead of one large MLP in each layer, there are several "expert" MLPs. A small routing network decides which expert(s) to use for each token. (GPT-4 is widely rumored to use MoE, though OpenAI has not confirmed this.)
 
-This means not all parameters are active for every token. A model with 1.8 trillion total parameters might only activate 200-300 billion per token. This makes the model both larger (more total knowledge) and faster (fewer computations per token).
+This means not all parameters are active for every token. A model with many experts might only activate a fraction of its total parameters per token. This makes the model both larger (more total knowledge) and faster (fewer computations per token).
 
 The attention mechanism stays the same. Only the MLP block is modified.
 
@@ -178,7 +182,7 @@ Adam (Lesson 11) or close variants (like AdamW, which adds weight decay) are use
 
 ### Same attention mechanism
 
-Q, K, V projections. Dot product scores. Scale by `sqrt(head_dim)`. Softmax. Weighted sum of values. Multi-head split. Output projection. This is the same in microgpt and GPT-4.
+Q, K, V projections. Dot product scores. Scale by `sqrt(head_dim)`. Softmax. Weighted sum of values. Multi-head split. Output projection. The core mechanism is the same, though real models often use variants like grouped-query attention (GQA) for efficiency, where multiple query heads share a single key/value head.
 
 ## The Unreasonable Effectiveness of Next-Token Prediction
 
@@ -233,6 +237,25 @@ Training GPT-3 took roughly 3.14 x 10^23 floating-point operations (FLOPs). To p
 
 But the training loop is the same. Pick a batch of text. Run the forward pass. Compute the loss. Run backward. Update with Adam. Repeat. The `for step in range(num_steps)` loop at `microgpt.py:188` is conceptually the same loop running on those GPU clusters -- just with more data, more parameters, and much more compute per step.
 
+## What This Toy Leaves Out
+
+microgpt is a complete, working GPT -- but it makes many simplifications to stay readable. If you move on to real implementations (PyTorch, Hugging Face, nanochat), here is what you'll encounter that microgpt doesn't have:
+
+| What's missing | Why it matters |
+|----------------|----------------|
+| **Batching** | microgpt trains on one name at a time. Real models process hundreds of examples simultaneously for efficiency. |
+| **Train/validation split** | microgpt has no way to detect overfitting. Real training holds out data to measure generalization. |
+| **Dropout** | Randomly zeroing activations during training to prevent overfitting. microgpt has none. |
+| **Learned norm weights** | microgpt's `rmsnorm` has no learnable parameters. Real implementations add a per-element scale. |
+| **Biases** | The `linear()` calls in microgpt have no bias terms. Most real models add `+ b` after each matrix multiply (or deliberately omit them as a design choice). |
+| **Weight tying** | Real models often share the token embedding matrix (`wte`) with the output projection (`lm_head`). microgpt keeps them separate. |
+| **Explicit causal mask** | microgpt processes tokens sequentially, so causality is implicit. Real models process all positions in parallel and need a triangular mask (see Lesson 13). |
+| **Subword tokenization** | Character-level tokenization is simple but inefficient. Real models use BPE or SentencePiece. |
+| **Multi-sample training** | microgpt's training loop sees each name once in sequence. Real training shuffles, repeats, and samples from enormous datasets. |
+| **Learning rate warmup** | Real training ramps up the learning rate gradually before decaying it. microgpt only decays. |
+
+None of these change the fundamental algorithm. They are all engineering improvements that make the same core idea work better, faster, or at larger scale. If you understand microgpt, you understand the skeleton that all of these additions hang on.
+
 ## What You Now Understand
 
 You started from zero. Here is what you know:
@@ -264,10 +287,42 @@ You have gone from zero to understanding the fundamental architecture behind eve
 
 The rest -- Flash Attention, distributed training across thousands of GPUs, RLHF, mixture of experts, quantization, speculative decoding -- is engineering. Important engineering, but engineering built on top of the ideas you now understand.
 
-When someone says "GPT-4 has 1.8 trillion parameters," you know what a parameter is (Lesson 1) and what those parameters do (they form the weight matrices in the attention and MLP layers you traced through in Lesson 15).
+When someone says "GPT-4 has billions of parameters," you know what a parameter is (Lesson 1) and what those parameters do (they form the weight matrices in the attention and MLP layers you traced through in Lesson 15).
 
 When someone says "the model uses attention," you know exactly what that means: Query-Key dot products, softmax weights, Value summation (Lesson 13).
 
 When someone says "it was trained with backpropagation," you know the chain rule is flowing gradients backward through every operation, telling each parameter how to change (Lesson 7).
 
 The core of every LLM is a prediction function with learned parameters, trained by gradient descent to predict the next token. microgpt implements this in 239 lines of Python. GPT-4 implements it across a massive distributed system. The idea is the same.
+
+## Where to Go Next
+
+You now understand every core concept behind modern LLMs. Here are the best resources to go deeper, organized by what you want to do next.
+
+### Watch
+
+- **Andrej Karpathy's "Let's build GPT from scratch"** (YouTube) -- Karpathy builds a character-level GPT in PyTorch from an empty file. You will recognize every single step because it mirrors what microgpt does, just in a real ML framework. The payoff is seeing that everything you learned maps directly to production code.
+
+- **Karpathy's "Neural Networks: Zero to Hero" full playlist** (YouTube) -- Covers micrograd (the same autograd engine as microgpt's `Value` class), makemore (character-level language models), and a full GPT build. This is the most thorough free course that starts from zero, and you now have enough background to move through it quickly.
+
+### Read
+
+- **"Attention Is All You Need"** (Vaswani et al., 2017) -- The original transformer paper. You now know every concept in it: Q/K/V attention, multi-head splitting, positional embeddings, residual connections, layer normalization, and feed-forward networks. Reading it will feel like recognizing old friends rather than meeting strangers.
+
+- **Sebastian Raschka's "Build a Large Language Model (From Scratch)"** -- A structured book that covers the full pipeline from tokenization through pretraining and fine-tuning. It bridges the gap between microgpt-scale understanding and real-world implementation, with clear PyTorch code at every step.
+
+- **Jay Alammar's "The Illustrated Transformer"** (blog post) -- Excellent visual explanations of the transformer architecture. Where microgpt taught you the math and the code, Alammar's diagrams will give you a complementary geometric intuition for how data flows through the model.
+
+### Build
+
+- **Implement a BPE tokenizer from scratch** -- microgpt uses character-level tokenization. Real models use BPE. Building one yourself bridges that gap and demystifies how "hello" becomes `[15339]` instead of `['h','e','l','l','o']`. Karpathy's minbpe repository is a good reference.
+
+- **Clone nanochat (github.com/karpathy/nanochat) and train a small model** -- This is the real training pipeline: batching, GPU acceleration, proper evaluation, and real datasets. You understand the algorithm; nanochat shows you the engineering that makes it work at scale.
+
+- **Port microgpt to PyTorch using the appendix mapping** -- The [appendix](./appendix-pytorch-mapping.md) maps every microgpt construct to its PyTorch equivalent. Translating the code yourself is the fastest way to verify that you understand both the concepts and the framework.
+
+### Explore
+
+- **llm.c by Karpathy** (github.com/karpathy/llm.c) -- The same transformer concepts implemented in raw C. If you want to understand what is happening at the hardware level -- no autograd, no framework, just memory and arithmetic -- this is the place. You will see that backpropagation is just a for-loop that multiplies and accumulates, exactly like `microgpt.py:95-97`.
+
+- **nanoGPT** (github.com/karpathy/nanoGPT) -- The predecessor to nanochat and simpler to start with. A clean, minimal GPT training codebase in PyTorch. Good as a first step before tackling nanochat's full feature set.

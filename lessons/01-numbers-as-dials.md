@@ -58,6 +58,10 @@ Different dial settings make the function behave completely differently:
 
 Same input (`3`), wildly different outputs -- all because we turned the dials.
 
+**Try it yourself:** Drag the w and b dials to see how parameters control a function.
+
+[Function & Dials Explorer](./interactive/function-dials.html)
+
 Notice the last row: when `w = 0`, the input doesn't even matter. The function always outputs `42`. And when `b = 0` (second row), the function is pure scaling. The dials control everything about how the function behaves.
 
 ## A Function With Dials: The Diagram
@@ -186,4 +190,14 @@ Each group is just a collection of numbers (dials). They all start random. They 
 > 5. **Training** = showing examples and nudging dials to reduce errors
 > 6. No rules are programmed. Patterns **emerge** from adjusting numbers
 
+
+---
+
+> **Lab 1: Break Initialization** — Set all parameters to zero or make them huge. See why random initialization matters.
+>
+> ```bash
+> cd labs && python3 lab01_break_initialization.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 2](./02-vectors.md)

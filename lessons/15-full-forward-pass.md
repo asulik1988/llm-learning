@@ -271,17 +271,27 @@ probs[0]  (a): 0.08    probs[13] (n): 0.35    probs[26] (BOS): 0.01
 probs[1]  (b): 0.01    probs[14] (o): 0.04
 probs[2]  (c): 0.01    probs[15] (p): 0.01
 probs[3]  (d): 0.05    probs[16] (q): 0.00
-probs[4]  (e): 0.06    probs[17] (r): 0.01
+probs[4]  (e): 0.07    probs[17] (r): 0.01
 probs[5]  (f): 0.01    probs[18] (s): 0.02
 probs[6]  (g): 0.03    probs[19] (t): 0.04
 probs[7]  (h): 0.02    probs[20] (u): 0.02
-probs[8]  (i): 0.05    probs[21] (v): 0.01
+probs[8]  (i): 0.06    probs[21] (v): 0.01
 probs[9]  (j): 0.01    probs[22] (w): 0.01
 probs[10] (k): 0.02    probs[23] (x): 0.00
-probs[11] (l): 0.02    probs[24] (y): 0.03
-probs[12] (m): 0.01    probs[25] (z): 0.00
+probs[11] (l): 0.03    probs[24] (y): 0.04
+probs[12] (m): 0.01    probs[25] (z): 0.03
 ```
 
 The model gives `n` the highest probability (`0.35`), meaning it thinks `n` is the most likely next character after `an`. The training loss for this position would be `-log(0.35) = 1.05`. Not terrible, but there is room to improve -- a perfect model would assign even more probability to `n`.
 
+
+---
+
+> **Lab 15: Deeper Model** — Add more transformer layers. Does depth help this tiny model?
+>
+> ```bash
+> cd labs && python3 lab15_deeper_model.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 16](./16-full-training-step.md)

@@ -188,4 +188,14 @@ After training, the vectors have been adjusted so that letters with similar role
 > 6. Token and position embeddings are **added** element-wise to form the combined representation (`microgpt.py:141`)
 > 7. All embedding numbers start random and get shaped by training
 
+
+---
+
+> **Lab 2: See Embeddings** — Set embedding size to 2, train, and plot where each letter ends up. Watch vowels cluster.
+>
+> ```bash
+> cd labs && python3 lab02_see_embeddings.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 3](./03-dot-product.md)

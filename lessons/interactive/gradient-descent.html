@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gradient Descent Sandbox</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: #F7F5F0;
+    color: #2A2520;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px 48px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+    color: #2A2520;
+  }
+
+  .subtitle {
+    font-size: 15px;
+    color: #6B6560;
+    margin-bottom: 28px;
+    font-style: italic;
+  }
+
+  .sandbox {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(42, 37, 32, 0.10);
+    border: 1px solid #E0DCD6;
+    cursor: crosshair;
+  }
+
+  canvas {
+    display: block;
+  }
+
+  .panel {
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .card {
+    background: #FFFFFF;
+    border-radius: 10px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 8px rgba(42, 37, 32, 0.06);
+    border: 1px solid #E8E4DE;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #C4850A;
+    margin-bottom: 12px;
+  }
+
+  /* Slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .slider-row label {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .slider-row input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: #E0DCD6;
+    outline: none;
+  }
+
+  .slider-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #C4850A;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+
+  .slider-row input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #C4850A;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+
+  .lr-value {
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Menlo', 'Consolas', monospace;
+    min-width: 48px;
+    text-align: right;
+    color: #C4850A;
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    font-family: 'Georgia', serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 7px;
+    border: 1.5px solid #C4850A;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    background: #FFFFFF;
+    color: #C4850A;
+  }
+
+  .btn:hover {
+    background: #FDF6EC;
+  }
+
+  .btn-primary {
+    background: #C4850A;
+    color: #FFFFFF;
+  }
+
+  .btn-primary:hover {
+    background: #A97208;
+  }
+
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .step-counter {
+    font-size: 14px;
+    color: #6B6560;
+    margin-top: 4px;
+  }
+
+  .step-counter strong {
+    color: #2A2520;
+  }
+
+  /* Math panel */
+  .math-block {
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 12.5px;
+    line-height: 1.85;
+    color: #2A2520;
+    background: #FAF8F4;
+    border-radius: 6px;
+    padding: 12px 14px;
+    border: 1px solid #E8E4DE;
+    overflow-x: auto;
+  }
+
+  .math-label {
+    color: #8A8580;
+    font-weight: 400;
+  }
+
+  .math-val {
+    color: #C4850A;
+    font-weight: 700;
+  }
+
+  /* Insight banner */
+  .insight {
+    font-size: 13.5px;
+    line-height: 1.55;
+    padding: 14px 16px;
+    border-radius: 8px;
+    background: #FDF6EC;
+    border-left: 3px solid #C4850A;
+    color: #5A4A2A;
+  }
+
+  .insight-title {
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #C4850A;
+  }
+
+  .placeholder-text {
+    font-size: 14px;
+    color: #A09A94;
+    font-style: italic;
+    text-align: center;
+    padding: 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>Gradient Descent Sandbox</h1>
+<p class="subtitle">Click to place a starting point. Adjust learning rate. Watch it converge (or diverge).</p>
+
+<div class="sandbox">
+  <div class="canvas-wrap">
+    <canvas id="landscape" width="500" height="500"></canvas>
+  </div>
+
+  <div class="panel" id="panel">
+    <!-- Cards built by JS -->
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── Constants ────────────────────────────────────────────
+  var W = 500, H = 500;
+  var RANGE = 4;                 // coordinate space: -4..4
+  var CONTOUR_LEVELS = 20;
+  var BALL_R = 7;
+  var TRAIL_R = 2.5;
+
+  // Colors
+  var CREAM    = '#F7F5F0';
+  var AMBER    = '#C4850A';
+  var DARK     = '#2A2520';
+
+  // ── State ────────────────────────────────────────────────
+  var lr = 0.05;
+  var pos = null;          // {x, y}
+  var path = [];           // [{x,y}, ...]
+  var steps = 0;
+  var autoTimer = null;
+  var autoPlaying = false;
+
+  // ── Loss function & gradient ─────────────────────────────
+  function loss(x, y) { return x * x + 3 * y * y; }
+  function gradX(x)    { return 2 * x; }
+  function gradY(y)    { return 6 * y; }
+
+  // ── Coordinate conversion ────────────────────────────────
+  function toCanvas(cx, cy) {
+    return {
+      px: (cx + RANGE) / (2 * RANGE) * W,
+      py: (RANGE - cy) / (2 * RANGE) * H
+    };
+  }
+  function toCoord(px, py) {
+    return {
+      x: (px / W) * 2 * RANGE - RANGE,
+      y: RANGE - (py / H) * 2 * RANGE
+    };
+  }
+
+  // ── Color mapping (cool -> warm) ─────────────────────────
+  function lossColor(v) {
+    var maxV = loss(RANGE, RANGE);  // 64
+    var t = Math.min(v / maxV, 1);
+    // Smooth mapping: deep blue -> teal -> green -> yellow -> orange -> red
+    var r, g, b;
+    if (t < 0.15) {
+      var s = t / 0.15;
+      r = Math.round(30 + 20 * s);
+      g = Math.round(60 + 100 * s);
+      b = Math.round(140 + 40 * s);
+    } else if (t < 0.35) {
+      var s = (t - 0.15) / 0.2;
+      r = Math.round(50 + 60 * s);
+      g = Math.round(160 + 40 * s);
+      b = Math.round(180 - 80 * s);
+    } else if (t < 0.55) {
+      var s = (t - 0.35) / 0.2;
+      r = Math.round(110 + 90 * s);
+      g = Math.round(200 - 10 * s);
+      b = Math.round(100 - 60 * s);
+    } else if (t < 0.75) {
+      var s = (t - 0.55) / 0.2;
+      r = Math.round(200 + 40 * s);
+      g = Math.round(190 - 70 * s);
+      b = Math.round(40 - 10 * s);
+    } else {
+      var s = (t - 0.75) / 0.25;
+      r = Math.round(240 + 15 * s);
+      g = Math.round(120 - 80 * s);
+      b = Math.round(30 + 10 * s);
+    }
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+
+  // ── Canvas setup ─────────────────────────────────────────
+  var canvas = document.getElementById('landscape');
+  var ctx = canvas.getContext('2d');
+
+  // Precompute heatmap as ImageData
+  var heatmapData = ctx.createImageData(W, H);
+  for (var py = 0; py < H; py++) {
+    for (var px = 0; px < W; px++) {
+      var c = toCoord(px, py);
+      var v = loss(c.x, c.y);
+      var maxV = loss(RANGE, RANGE);
+      var t = Math.min(v / maxV, 1);
+      var r, g, b;
+      if (t < 0.15) {
+        var s = t / 0.15;
+        r = 30 + 20 * s; g = 60 + 100 * s; b = 140 + 40 * s;
+      } else if (t < 0.35) {
+        var s = (t - 0.15) / 0.2;
+        r = 50 + 60 * s; g = 160 + 40 * s; b = 180 - 80 * s;
+      } else if (t < 0.55) {
+        var s = (t - 0.35) / 0.2;
+        r = 110 + 90 * s; g = 200 - 10 * s; b = 100 - 60 * s;
+      } else if (t < 0.75) {
+        var s = (t - 0.55) / 0.2;
+        r = 200 + 40 * s; g = 190 - 70 * s; b = 40 - 10 * s;
+      } else {
+        var s = (t - 0.75) / 0.25;
+        r = 240 + 15 * s; g = 120 - 80 * s; b = 30 + 10 * s;
+      }
+      var idx = (py * W + px) * 4;
+      heatmapData.data[idx]     = Math.round(r);
+      heatmapData.data[idx + 1] = Math.round(g);
+      heatmapData.data[idx + 2] = Math.round(b);
+      heatmapData.data[idx + 3] = 255;
+    }
+  }
+
+  function drawHeatmap() {
+    ctx.putImageData(heatmapData, 0, 0);
+  }
+
+  function drawContours() {
+    var maxV = loss(RANGE, RANGE);
+    ctx.lineWidth = 1;
+
+    for (var i = 1; i <= CONTOUR_LEVELS; i++) {
+      var level = (i / CONTOUR_LEVELS) * maxV * 0.85;
+      // For x^2 + 3y^2 = level, parametric: x = sqrt(level)*cos(t), y = sqrt(level/3)*sin(t)
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      for (var j = 0; j <= 200; j++) {
+        var angle = (j / 200) * Math.PI * 2;
+        var cx = Math.sqrt(level) * Math.cos(angle);
+        var cy = Math.sqrt(level / 3) * Math.sin(angle);
+        var p = toCanvas(cx, cy);
+        if (j === 0) ctx.moveTo(p.px, p.py);
+        else ctx.lineTo(p.px, p.py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+  }
+
+  function drawAxes() {
+    var origin = toCanvas(0, 0);
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+
+    ctx.beginPath();
+    ctx.moveTo(0, origin.py);
+    ctx.lineTo(W, origin.py);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(origin.px, 0);
+    ctx.lineTo(origin.px, H);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+
+    // Small min marker
+    ctx.beginPath();
+    ctx.arc(origin.px, origin.py, 4, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  function drawAxisLabels() {
+    ctx.font = '11px Menlo, Consolas, monospace';
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.textAlign = 'center';
+    for (var v = -3; v <= 3; v++) {
+      if (v === 0) continue;
+      var px = toCanvas(v, 0);
+      ctx.fillText(String(v), px.px, toCanvas(0, 0).py + 14);
+      var py = toCanvas(0, v);
+      ctx.textAlign = 'right';
+      ctx.fillText(String(v), toCanvas(0, 0).px - 6, py.py + 4);
+      ctx.textAlign = 'center';
+    }
+    // Labels
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '12px Georgia, serif';
+    ctx.fillText('x', W - 14, toCanvas(0, 0).py + 16);
+    ctx.textAlign = 'left';
+    ctx.fillText('y', toCanvas(0, 0).px + 8, 14);
+  }
+
+  function drawPath() {
+    if (path.length < 2) return;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    for (var i = 1; i < path.length; i++) {
+      var a = toCanvas(path[i - 1].x, path[i - 1].y);
+      var b = toCanvas(path[i].x, path[i].y);
+      var alpha = 0.3 + 0.7 * (i / path.length);
+      ctx.strokeStyle = 'rgba(255,255,255,' + alpha.toFixed(2) + ')';
+      ctx.beginPath();
+      ctx.moveTo(a.px, a.py);
+      ctx.lineTo(b.px, b.py);
+      ctx.stroke();
+    }
+
+    // Trail dots
+    for (var i = 0; i < path.length - 1; i++) {
+      var p = toCanvas(path[i].x, path[i].y);
+      var alpha = 0.25 + 0.5 * (i / path.length);
+      ctx.beginPath();
+      ctx.arc(p.px, p.py, TRAIL_R, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,' + alpha.toFixed(2) + ')';
+      ctx.fill();
+    }
+  }
+
+  function drawBall() {
+    if (!pos) return;
+    var p = toCanvas(pos.x, pos.y);
+
+    // Glow
+    var grad = ctx.createRadialGradient(p.px, p.py, 0, p.px, p.py, BALL_R * 2.5);
+    grad.addColorStop(0, 'rgba(255,255,255,0.35)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.beginPath();
+    ctx.arc(p.px, p.py, BALL_R * 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Ball
+    ctx.beginPath();
+    ctx.arc(p.px, p.py, BALL_R, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(42,37,32,0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  function render() {
+    drawHeatmap();
+    drawContours();
+    drawAxes();
+    drawAxisLabels();
+    drawPath();
+    drawBall();
+  }
+
+  // ── Build panel with DOM manipulation ────────────────────
+  var panel = document.getElementById('panel');
+
+  // Controls card
+  var controlsCard = document.createElement('div');
+  controlsCard.className = 'card';
+  var controlsTitle = document.createElement('div');
+  controlsTitle.className = 'card-title';
+  controlsTitle.textContent = 'Controls';
+  controlsCard.appendChild(controlsTitle);
+
+  // Slider row
+  var sliderRow = document.createElement('div');
+  sliderRow.className = 'slider-row';
+  var sliderLabel = document.createElement('label');
+  sliderLabel.textContent = 'Learning rate';
+  var slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = '0.001';
+  slider.max = '0.5';
+  slider.step = '0.001';
+  slider.value = '0.05';
+  var lrDisplay = document.createElement('span');
+  lrDisplay.className = 'lr-value';
+  lrDisplay.textContent = '0.050';
+  sliderRow.appendChild(sliderLabel);
+  sliderRow.appendChild(slider);
+  sliderRow.appendChild(lrDisplay);
+  controlsCard.appendChild(sliderRow);
+
+  // Spacer
+  var spacer = document.createElement('div');
+  spacer.style.height = '12px';
+  controlsCard.appendChild(spacer);
+
+  // Button row
+  var btnRow = document.createElement('div');
+  btnRow.className = 'btn-row';
+  var stepBtn = document.createElement('button');
+  stepBtn.className = 'btn btn-primary';
+  stepBtn.textContent = 'Step';
+  stepBtn.disabled = true;
+  var autoBtn = document.createElement('button');
+  autoBtn.className = 'btn';
+  autoBtn.textContent = 'Auto';
+  autoBtn.disabled = true;
+  var resetBtn = document.createElement('button');
+  resetBtn.className = 'btn';
+  resetBtn.textContent = 'Reset';
+  btnRow.appendChild(stepBtn);
+  btnRow.appendChild(autoBtn);
+  btnRow.appendChild(resetBtn);
+  controlsCard.appendChild(btnRow);
+
+  // Step counter
+  var stepCounter = document.createElement('div');
+  stepCounter.className = 'step-counter';
+  var stepCounterLabel = document.createTextNode('Steps: ');
+  var stepCounterValue = document.createElement('strong');
+  stepCounterValue.textContent = '0';
+  stepCounter.appendChild(stepCounterLabel);
+  stepCounter.appendChild(stepCounterValue);
+  controlsCard.appendChild(stepCounter);
+
+  panel.appendChild(controlsCard);
+
+  // Math card
+  var mathCard = document.createElement('div');
+  mathCard.className = 'card';
+  var mathTitle = document.createElement('div');
+  mathTitle.className = 'card-title';
+  mathTitle.textContent = 'The Math';
+  mathCard.appendChild(mathTitle);
+
+  var mathBlock = document.createElement('div');
+  mathBlock.className = 'math-block';
+  var mathPlaceholder = document.createElement('div');
+  mathPlaceholder.className = 'placeholder-text';
+  mathPlaceholder.textContent = 'Click the landscape to begin';
+  mathBlock.appendChild(mathPlaceholder);
+  mathCard.appendChild(mathBlock);
+  panel.appendChild(mathCard);
+
+  // Insight card
+  var insightCard = document.createElement('div');
+  insightCard.className = 'card';
+  var insightTitle = document.createElement('div');
+  insightTitle.className = 'card-title';
+  insightTitle.textContent = 'What to Try';
+  insightCard.appendChild(insightTitle);
+  var insightBox = document.createElement('div');
+  insightBox.className = 'insight';
+
+  function buildInsightContent() {
+    insightBox.textContent = '';
+
+    var items = [
+      { bold: 'Slow (lr = 0.01):', text: ' The ball creeps toward the minimum. Many steps needed.' },
+      { bold: 'Good (lr = 0.05):', text: ' Smooth convergence in ~20 steps.' },
+      { bold: 'Danger (lr = 0.3+):', text: ' Ball oscillates wildly or diverges past the edges.' },
+      { bold: 'Notice the ellipse:', text: ' Gradient descent oscillates on the steep y-axis while crawling along x. This is exactly why optimizers like Adam were invented.' }
+    ];
+
+    for (var i = 0; i < items.length; i++) {
+      if (i > 0) {
+        insightBox.appendChild(document.createElement('br'));
+        insightBox.appendChild(document.createElement('br'));
+      }
+      var b = document.createElement('strong');
+      b.textContent = items[i].bold;
+      insightBox.appendChild(b);
+      insightBox.appendChild(document.createTextNode(items[i].text));
+    }
+  }
+  buildInsightContent();
+
+  insightCard.appendChild(insightBox);
+  panel.appendChild(insightCard);
+
+  // ── Update math display ──────────────────────────────────
+  function updateMath() {
+    mathBlock.textContent = '';
+
+    if (!pos) {
+      var ph = document.createElement('div');
+      ph.className = 'placeholder-text';
+      ph.textContent = 'Click the landscape to begin';
+      mathBlock.appendChild(ph);
+      return;
+    }
+
+    var x = pos.x;
+    var y = pos.y;
+    var gx = gradX(x);
+    var gy = gradY(y);
+    var lv = loss(x, y);
+
+    var lines = [
+      { label: 'Position:  ', val: '(' + x.toFixed(3) + ', ' + y.toFixed(3) + ')' },
+      { label: 'Loss:      ', val: x.toFixed(3) + '\u00B2 + 3\u00D7' + y.toFixed(3) + '\u00B2 = ' + lv.toFixed(4) },
+      { label: '', val: '' },
+      { label: 'Gradient:  ', val: '(2x, 6y) = (' + gx.toFixed(3) + ', ' + gy.toFixed(3) + ')' },
+      { label: '', val: '' },
+      { label: 'Update x:  ', val: x.toFixed(3) + ' - ' + lr.toFixed(3) + ' \u00D7 ' + gx.toFixed(3) + ' = ' + (x - lr * gx).toFixed(3) },
+      { label: 'Update y:  ', val: y.toFixed(3) + ' - ' + lr.toFixed(3) + ' \u00D7 ' + gy.toFixed(3) + ' = ' + (y - lr * gy).toFixed(3) }
+    ];
+
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].label === '' && lines[i].val === '') {
+        mathBlock.appendChild(document.createElement('br'));
+        continue;
+      }
+      var line = document.createElement('div');
+      var labelSpan = document.createElement('span');
+      labelSpan.className = 'math-label';
+      labelSpan.textContent = lines[i].label;
+      var valSpan = document.createElement('span');
+      valSpan.className = 'math-val';
+      valSpan.textContent = lines[i].val;
+      line.appendChild(labelSpan);
+      line.appendChild(valSpan);
+      mathBlock.appendChild(line);
+    }
+  }
+
+  // ── Gradient descent step ────────────────────────────────
+  function doStep() {
+    if (!pos) return;
+
+    var gx = gradX(pos.x);
+    var gy = gradY(pos.y);
+
+    pos.x = pos.x - lr * gx;
+    pos.y = pos.y - lr * gy;
+
+    path.push({ x: pos.x, y: pos.y });
+    steps++;
+
+    stepCounterValue.textContent = String(steps);
+    updateMath();
+    render();
+
+    // Stop auto if diverged off screen
+    if (Math.abs(pos.x) > RANGE * 2 || Math.abs(pos.y) > RANGE * 2) {
+      stopAuto();
+    }
+  }
+
+  function stopAuto() {
+    if (autoTimer) {
+      clearInterval(autoTimer);
+      autoTimer = null;
+    }
+    autoPlaying = false;
+    autoBtn.textContent = 'Auto';
+    autoBtn.className = 'btn';
+  }
+
+  // ── Event handlers ───────────────────────────────────────
+  canvas.addEventListener('click', function(e) {
+    var rect = canvas.getBoundingClientRect();
+    var px = (e.clientX - rect.left) * (W / rect.width);
+    var py = (e.clientY - rect.top) * (H / rect.height);
+    var c = toCoord(px, py);
+
+    stopAuto();
+    pos = { x: c.x, y: c.y };
+    path = [{ x: c.x, y: c.y }];
+    steps = 0;
+    stepCounterValue.textContent = '0';
+    stepBtn.disabled = false;
+    autoBtn.disabled = false;
+    updateMath();
+    render();
+  });
+
+  slider.addEventListener('input', function() {
+    lr = parseFloat(slider.value);
+    lrDisplay.textContent = lr.toFixed(3);
+    updateMath();
+  });
+
+  stepBtn.addEventListener('click', function() {
+    doStep();
+  });
+
+  autoBtn.addEventListener('click', function() {
+    if (autoPlaying) {
+      stopAuto();
+    } else {
+      autoPlaying = true;
+      autoBtn.textContent = 'Pause';
+      autoBtn.className = 'btn btn-primary';
+      autoTimer = setInterval(doStep, 200);
+    }
+  });
+
+  resetBtn.addEventListener('click', function() {
+    stopAuto();
+    pos = null;
+    path = [];
+    steps = 0;
+    stepCounterValue.textContent = '0';
+    stepBtn.disabled = true;
+    autoBtn.disabled = true;
+    updateMath();
+    render();
+  });
+
+  // ── Initial render ───────────────────────────────────────
+  render();
+  updateMath();
+
+})();
+</script>
+</body>
+</html>

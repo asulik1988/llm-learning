@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Function &amp; Dials Explorer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #F7F5F0;
+    color: #2A2520;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem 3rem;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-size: clamp(1.4rem, 3.5vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+  }
+
+  .subtitle {
+    font-size: clamp(0.9rem, 2vw, 1.05rem);
+    color: #6B6560;
+    margin-bottom: 1.5rem;
+    font-style: italic;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    background: #FFFEFA;
+    box-shadow: 0 1px 4px rgba(42,37,32,0.08);
+  }
+
+  /* --- Dial Controls --- */
+  .dials-area {
+    width: 100%;
+    max-width: 720px;
+    margin-top: 1.25rem;
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .dial-group {
+    flex: 1;
+    min-width: 240px;
+    max-width: 340px;
+    background: #FFFEFA;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 1px 4px rgba(42,37,32,0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .dial-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .dial-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #C4850A;
+  }
+
+  .dial-role {
+    font-size: 0.8rem;
+    color: #6B6560;
+    font-style: italic;
+  }
+
+  .dial-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'Menlo', 'Consolas', monospace;
+    color: #2A2520;
+    min-width: 3.5em;
+    text-align: center;
+  }
+
+  .dial-slider-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .dial-bound {
+    font-size: 0.7rem;
+    color: #9B9590;
+    font-family: 'Menlo', 'Consolas', monospace;
+    flex-shrink: 0;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: #DDD8D0;
+    outline: none;
+    transition: background 0.15s;
+  }
+
+  input[type="range"]:hover {
+    background: #D0CBC3;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #E8A820, #C4850A 70%);
+    border: 2px solid #A06E08;
+    cursor: grab;
+    box-shadow: 0 2px 6px rgba(42,37,32,0.25), inset 0 1px 2px rgba(255,255,255,0.35);
+    transition: transform 0.1s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(1.12);
+    box-shadow: 0 3px 10px rgba(42,37,32,0.3), inset 0 1px 2px rgba(255,255,255,0.35);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #E8A820, #C4850A 70%);
+    border: 2px solid #A06E08;
+    cursor: grab;
+    box-shadow: 0 2px 6px rgba(42,37,32,0.25), inset 0 1px 2px rgba(255,255,255,0.35);
+  }
+
+  /* --- Formula Display --- */
+  .formula-area {
+    width: 100%;
+    max-width: 720px;
+    margin-top: 1.25rem;
+    background: #FFFEFA;
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 1px 4px rgba(42,37,32,0.08);
+    text-align: center;
+  }
+
+  .formula-generic {
+    font-size: 1.05rem;
+    color: #6B6560;
+    margin-bottom: 0.4rem;
+    font-family: 'Menlo', 'Consolas', monospace;
+  }
+
+  .formula-live {
+    font-size: 1.2rem;
+    font-weight: 700;
+    font-family: 'Menlo', 'Consolas', monospace;
+    color: #2A2520;
+  }
+
+  .formula-w { color: #C4850A; }
+  .formula-b { color: #6B8E23; }
+  .formula-result { color: #B44A1E; }
+
+  /* --- Observations Panel --- */
+  .observation-area {
+    width: 100%;
+    max-width: 720px;
+    margin-top: 1rem;
+    background: #FBF8F1;
+    border-left: 4px solid #C4850A;
+    border-radius: 0 10px 10px 0;
+    padding: 0.9rem 1.25rem;
+    box-shadow: 0 1px 4px rgba(42,37,32,0.06);
+    min-height: 2.8rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .observation-icon {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-right: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .observation-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .observation-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #4A4540;
+  }
+
+  /* --- Scale Up Button --- */
+  .scale-area {
+    width: 100%;
+    max-width: 720px;
+    margin-top: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .scale-btn {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #FFFEFA;
+    background: linear-gradient(135deg, #C4850A 0%, #A06E08 100%);
+    border: none;
+    border-radius: 8px;
+    padding: 0.7rem 1.6rem;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(166,110,8,0.25);
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+
+  .scale-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(166,110,8,0.35);
+  }
+
+  .scale-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(166,110,8,0.2);
+  }
+
+  .scale-message {
+    background: #FFFEFA;
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 1px 4px rgba(42,37,32,0.08);
+    font-size: 0.92rem;
+    line-height: 1.65;
+    color: #4A4540;
+    max-width: 720px;
+    overflow: hidden;
+    transition: max-height 0.5s ease, opacity 0.5s ease, padding 0.5s ease;
+    max-height: 0;
+    opacity: 0;
+    padding: 0 1.5rem;
+  }
+
+  .scale-message.visible {
+    max-height: 200px;
+    opacity: 1;
+    padding: 1rem 1.5rem;
+  }
+
+  .scale-highlight {
+    font-weight: 700;
+    color: #C4850A;
+  }
+
+  /* --- Connection Footer --- */
+  .connection-area {
+    width: 100%;
+    max-width: 720px;
+    margin-top: 1rem;
+    padding: 0.8rem 1.25rem;
+    font-size: 0.82rem;
+    color: #9B9590;
+    text-align: center;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  .connection-area code {
+    font-family: 'Menlo', 'Consolas', monospace;
+    font-size: 0.78rem;
+    background: #EDE9E2;
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    font-style: normal;
+    color: #6B6560;
+  }
+</style>
+</head>
+<body>
+
+<h1 id="title"></h1>
+<p class="subtitle" id="subtitle"></p>
+
+<div class="canvas-wrap">
+  <canvas id="graph" width="1440" height="960"></canvas>
+</div>
+
+<div class="dials-area">
+  <div class="dial-group">
+    <div class="dial-header">
+      <span class="dial-name">w</span>
+      <span class="dial-role">weight (slope)</span>
+    </div>
+    <div class="dial-value" id="w-display"></div>
+    <div class="dial-slider-row">
+      <span class="dial-bound">-5</span>
+      <input type="range" id="w-slider" min="-5" max="5" step="0.1" value="2">
+      <span class="dial-bound">5</span>
+    </div>
+  </div>
+  <div class="dial-group">
+    <div class="dial-header">
+      <span class="dial-name" style="color:#6B8E23;">b</span>
+      <span class="dial-role">bias (offset)</span>
+    </div>
+    <div class="dial-value" id="b-display"></div>
+    <div class="dial-slider-row">
+      <span class="dial-bound">-5</span>
+      <input type="range" id="b-slider" min="-5" max="5" step="0.1" value="1">
+      <span class="dial-bound">5</span>
+    </div>
+  </div>
+</div>
+
+<div class="formula-area">
+  <div class="formula-generic" id="formula-generic"></div>
+  <div class="formula-live" id="formula-live"></div>
+</div>
+
+<div class="observation-area">
+  <div class="observation-icon">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#C4850A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="16" x2="12" y2="12"/>
+      <line x1="12" y1="8" x2="12.01" y2="8"/>
+    </svg>
+  </div>
+  <div class="observation-text" id="observation"></div>
+</div>
+
+<div class="scale-area">
+  <button class="scale-btn" id="scale-btn"></button>
+  <div class="scale-message" id="scale-message"></div>
+</div>
+
+<div class="connection-area" id="connection"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // --- Config ---
+  var X_INPUT = 3;
+  var X_MIN = -5, X_MAX = 5;
+  var Y_MIN = -10, Y_MAX = 10;
+
+  // --- DOM refs ---
+  var canvas = document.getElementById("graph");
+  var ctx = canvas.getContext("2d");
+  var wSlider = document.getElementById("w-slider");
+  var bSlider = document.getElementById("b-slider");
+  var wDisplay = document.getElementById("w-display");
+  var bDisplay = document.getElementById("b-display");
+  var formulaGeneric = document.getElementById("formula-generic");
+  var formulaLive = document.getElementById("formula-live");
+  var observationEl = document.getElementById("observation");
+  var scaleBtnEl = document.getElementById("scale-btn");
+  var scaleMessageEl = document.getElementById("scale-message");
+  var connectionEl = document.getElementById("connection");
+
+  // --- Static text via textContent / DOM manipulation ---
+  document.getElementById("title").textContent = "Function & Dials Explorer";
+  document.getElementById("subtitle").textContent = "Drag the dials to see how parameters control a function";
+  scaleBtnEl.textContent = "What about 4,192 dials?";
+
+  // Connection text with <code> elements
+  connectionEl.textContent = "";
+  var connPre = document.createTextNode("In microgpt, every Value in ");
+  var code1 = document.createElement("code");
+  code1.textContent = "state_dict";
+  var connMid = document.createTextNode(" is a dial like w and b. They start random (");
+  var code2 = document.createElement("code");
+  code2.textContent = "microgpt.py:106";
+  var connEnd = document.createTextNode(") and get adjusted during training.");
+  connectionEl.appendChild(connPre);
+  connectionEl.appendChild(code1);
+  connectionEl.appendChild(connMid);
+  connectionEl.appendChild(code2);
+  connectionEl.appendChild(connEnd);
+
+  // Generic formula (built via spans for colored parts)
+  formulaGeneric.textContent = "";
+  var fgParts = [
+    { text: "f(x) = ", cls: null },
+    { text: "w", cls: "formula-w" },
+    { text: " \u00d7 x + ", cls: null },
+    { text: "b", cls: "formula-b" }
+  ];
+  fgParts.forEach(function (p) {
+    var span = document.createElement("span");
+    span.textContent = p.text;
+    if (p.cls) span.className = p.cls;
+    formulaGeneric.appendChild(span);
+  });
+
+  // --- Scale-up message (built safely) ---
+  var scaleVisible = false;
+
+  function buildScaleMessage() {
+    scaleMessageEl.textContent = "";
+    var parts = [
+      { text: "microgpt", bold: true },
+      { text: " has ", bold: false },
+      { text: "4,192 parameters", bold: true },
+      { text: " like w and b. Instead of one line, they define a complex function that takes a letter and predicts the next letter. ", bold: false },
+      { text: "Training = finding the right setting for all 4,192 dials.", bold: true }
+    ];
+    parts.forEach(function (p) {
+      var el;
+      if (p.bold) {
+        el = document.createElement("span");
+        el.className = "scale-highlight";
+      } else {
+        el = document.createElement("span");
+      }
+      el.textContent = p.text;
+      scaleMessageEl.appendChild(el);
+    });
+  }
+
+  buildScaleMessage();
+
+  scaleBtnEl.addEventListener("click", function () {
+    scaleVisible = !scaleVisible;
+    if (scaleVisible) {
+      scaleMessageEl.classList.add("visible");
+    } else {
+      scaleMessageEl.classList.remove("visible");
+    }
+  });
+
+  // --- Drawing helpers ---
+  var DPR = window.devicePixelRatio || 1;
+  var CW, CH;
+  var PAD_LEFT = 70, PAD_RIGHT = 30, PAD_TOP = 30, PAD_BOTTOM = 50;
+
+  function resizeCanvas() {
+    var rect = canvas.getBoundingClientRect();
+    CW = Math.round(rect.width * DPR);
+    CH = Math.round(rect.width * (2 / 3) * DPR);
+    canvas.width = CW;
+    canvas.height = CH;
+    canvas.style.height = (CH / DPR) + "px";
+    PAD_LEFT = Math.round(70 * DPR);
+    PAD_RIGHT = Math.round(30 * DPR);
+    PAD_TOP = Math.round(30 * DPR);
+    PAD_BOTTOM = Math.round(50 * DPR);
+  }
+
+  function xToCanvas(x) {
+    var plotW = CW - PAD_LEFT - PAD_RIGHT;
+    return PAD_LEFT + ((x - X_MIN) / (X_MAX - X_MIN)) * plotW;
+  }
+
+  function yToCanvas(y) {
+    var plotH = CH - PAD_TOP - PAD_BOTTOM;
+    return PAD_TOP + ((Y_MAX - y) / (Y_MAX - Y_MIN)) * plotH;
+  }
+
+  function drawGrid() {
+    ctx.clearRect(0, 0, CW, CH);
+
+    var fontSize = Math.round(11 * DPR);
+    ctx.font = fontSize + "px Menlo, Consolas, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+
+    // Vertical grid lines + x labels
+    for (var x = X_MIN; x <= X_MAX; x++) {
+      var cx = xToCanvas(x);
+      ctx.strokeStyle = (x === 0) ? "#B0ACA5" : "#E8E4DD";
+      ctx.lineWidth = (x === 0) ? 1.5 * DPR : 0.5 * DPR;
+      ctx.beginPath();
+      ctx.moveTo(cx, PAD_TOP);
+      ctx.lineTo(cx, CH - PAD_BOTTOM);
+      ctx.stroke();
+
+      ctx.fillStyle = "#9B9590";
+      ctx.fillText(String(x), cx, CH - PAD_BOTTOM + 8 * DPR);
+    }
+
+    // Horizontal grid lines + y labels
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    for (var y = Y_MIN; y <= Y_MAX; y += 2) {
+      var cy = yToCanvas(y);
+      ctx.strokeStyle = (y === 0) ? "#B0ACA5" : "#E8E4DD";
+      ctx.lineWidth = (y === 0) ? 1.5 * DPR : 0.5 * DPR;
+      ctx.beginPath();
+      ctx.moveTo(PAD_LEFT, cy);
+      ctx.lineTo(CW - PAD_RIGHT, cy);
+      ctx.stroke();
+
+      ctx.fillStyle = "#9B9590";
+      ctx.fillText(String(y), PAD_LEFT - 10 * DPR, cy);
+    }
+
+    // Axis labels
+    ctx.fillStyle = "#6B6560";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.font = "italic " + Math.round(13 * DPR) + "px Georgia, serif";
+    ctx.fillText("x", CW - PAD_RIGHT + 18 * DPR, yToCanvas(0) - 6 * DPR);
+    ctx.textBaseline = "bottom";
+    ctx.fillText("y", xToCanvas(0) + 14 * DPR, PAD_TOP - 6 * DPR);
+  }
+
+  function drawLine(w, b) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(PAD_LEFT, PAD_TOP, CW - PAD_LEFT - PAD_RIGHT, CH - PAD_TOP - PAD_BOTTOM);
+    ctx.clip();
+
+    // The function line
+    ctx.strokeStyle = "#C4850A";
+    ctx.lineWidth = 3 * DPR;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+
+    var steps = 400;
+    for (var i = 0; i <= steps; i++) {
+      var x = X_MIN + (X_MAX - X_MIN) * (i / steps);
+      var y = w * x + b;
+      var cx = xToCanvas(x);
+      var cy = yToCanvas(y);
+      if (i === 0) ctx.moveTo(cx, cy);
+      else ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPoint(w, b) {
+    var x = X_INPUT;
+    var y = w * x + b;
+    var cx = xToCanvas(x);
+    var cy = yToCanvas(y);
+
+    // Clamp label position to plot area
+    var plotTop = PAD_TOP;
+    var plotBottom = CH - PAD_BOTTOM;
+    var cyDraw = Math.max(plotTop + 8 * DPR, Math.min(plotBottom - 8 * DPR, cy));
+
+    // Dashed guide line from x-axis up to the point
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(PAD_LEFT, PAD_TOP, CW - PAD_LEFT - PAD_RIGHT, CH - PAD_TOP - PAD_BOTTOM);
+    ctx.clip();
+
+    ctx.setLineDash([4 * DPR, 4 * DPR]);
+    ctx.strokeStyle = "#B44A1E";
+    ctx.lineWidth = 1 * DPR;
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, yToCanvas(0));
+    ctx.lineTo(cx, cy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // The dot
+    ctx.beginPath();
+    ctx.arc(cx, cyDraw, 7 * DPR, 0, Math.PI * 2);
+    ctx.fillStyle = "#B44A1E";
+    ctx.fill();
+    ctx.lineWidth = 2 * DPR;
+    ctx.strokeStyle = "#FFFEFA";
+    ctx.stroke();
+    ctx.restore();
+
+    // Label
+    var label = "f(" + x + ") = " + formatNum(y);
+    var labelFont = Math.round(12 * DPR);
+    ctx.font = "bold " + labelFont + "px Menlo, Consolas, monospace";
+    var tw = ctx.measureText(label).width;
+    var lx = cx + 12 * DPR;
+    var ly = cyDraw - 10 * DPR;
+
+    // Keep label inside canvas
+    if (lx + tw + 6 * DPR > CW - PAD_RIGHT) {
+      lx = cx - tw - 18 * DPR;
+    }
+    if (ly - 14 * DPR < PAD_TOP) {
+      ly = cyDraw + 20 * DPR;
+    }
+
+    // Label background
+    ctx.fillStyle = "rgba(255,254,250,0.88)";
+    roundRect(ctx, lx - 4 * DPR, ly - 14 * DPR, tw + 8 * DPR, 20 * DPR, 4 * DPR);
+    ctx.fill();
+
+    ctx.fillStyle = "#B44A1E";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, lx, ly - 3 * DPR);
+
+    // "x=3" label on x-axis
+    var axisLabelFont = Math.round(11 * DPR);
+    ctx.font = axisLabelFont + "px Menlo, Consolas, monospace";
+    ctx.fillStyle = "#B44A1E";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("x=" + x, cx, CH - PAD_BOTTOM + 22 * DPR);
+  }
+
+  function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.lineTo(x + w - r, y);
+    c.quadraticCurveTo(x + w, y, x + w, y + r);
+    c.lineTo(x + w, y + h - r);
+    c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    c.lineTo(x + r, y + h);
+    c.quadraticCurveTo(x, y + h, x, y + h - r);
+    c.lineTo(x, y + r);
+    c.quadraticCurveTo(x, y, x + r, y);
+    c.closePath();
+  }
+
+  function formatNum(n) {
+    var r = Math.round(n * 100) / 100;
+    if (r === 0) return "0";
+    return String(r);
+  }
+
+  function formatSlider(n) {
+    var r = Math.round(n * 10) / 10;
+    if (r > 0) return "+" + r.toFixed(1);
+    return r.toFixed(1);
+  }
+
+  // --- Live formula update ---
+  function updateFormula(w, b) {
+    formulaLive.textContent = "";
+
+    var wStr = formatNum(w);
+    var bStr = formatNum(b);
+    var result = formatNum(w * X_INPUT + b);
+    var bSign = b >= 0 ? " + " : " \u2212 ";
+    var bAbs = formatNum(Math.abs(b));
+
+    var parts = [
+      { text: "f(" + X_INPUT + ") = ", cls: null },
+      { text: wStr, cls: "formula-w" },
+      { text: " \u00d7 " + X_INPUT, cls: null },
+      { text: bSign, cls: null },
+      { text: bAbs, cls: "formula-b" },
+      { text: " = ", cls: null },
+      { text: result, cls: "formula-result" }
+    ];
+
+    parts.forEach(function (p) {
+      var span = document.createElement("span");
+      span.textContent = p.text;
+      if (p.cls) span.className = p.cls;
+      formulaLive.appendChild(span);
+    });
+  }
+
+  // --- Observations ---
+  function updateObservation(w, b) {
+    var msg;
+    var wr = Math.round(w * 10) / 10;
+    var br = Math.round(b * 10) / 10;
+
+    if (wr === 0) {
+      msg = "When w=0, the input doesn't matter. The output is always " + formatNum(b) + ".";
+    } else if (wr === 1 && br === 0) {
+      msg = "The identity function: output equals input.";
+    } else if (br === 0) {
+      msg = "When b=0, the function is pure scaling: f(x) = " + formatNum(w) + "x";
+    } else if (wr < 0) {
+      msg = "Negative w flips the line. The function decreases as x increases.";
+    } else {
+      msg = "w controls the slope (steepness). b controls the offset (shift up/down).";
+    }
+
+    observationEl.textContent = msg;
+  }
+
+  // --- Main draw ---
+  function draw() {
+    var w = parseFloat(wSlider.value);
+    var b = parseFloat(bSlider.value);
+
+    wDisplay.textContent = formatSlider(w);
+    bDisplay.textContent = formatSlider(b);
+
+    drawGrid();
+    drawLine(w, b);
+    drawPoint(w, b);
+    updateFormula(w, b);
+    updateObservation(w, b);
+  }
+
+  // --- Events ---
+  wSlider.addEventListener("input", draw);
+  bSlider.addEventListener("input", draw);
+
+  window.addEventListener("resize", function () {
+    resizeCanvas();
+    draw();
+  });
+
+  // --- Init ---
+  resizeCanvas();
+  draw();
+})();
+</script>
+</body>
+</html>

@@ -129,6 +129,10 @@ We started with `[2.0, 1.0, 0.5]` (not probabilities) and ended with `[0.628, 0.
 
 ![diagram](./images/mermaid-04-probability-and-softmax-0.png)
 
+**Try it yourself:** Drag the logit sliders and temperature to see softmax in action.
+
+[Softmax Explorer](./interactive/softmax-explorer.html)
+
 ### What Softmax Does to Differences
 
 Softmax amplifies differences. A small gap in logits becomes a bigger gap in probabilities:
@@ -238,4 +242,14 @@ After softmax, these become probabilities. Token 12 ("m") has the highest logit 
 > 5. microgpt subtracts the max logit first for **numerical stability** (`microgpt.py:126`) -- this doesn't change the answer
 > 6. Softmax appears twice: for **attention weights** (`microgpt.py:163`) and for **final predictions** (`microgpt.py:200`)
 
+
+---
+
+> **Lab 4: Temperature** — Generate names at temperatures from 0.01 to 3.0. See the full spectrum.
+>
+> ```bash
+> cd labs && python3 lab04_temperature.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 5](./05-loss.md)

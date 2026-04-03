@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Softmax &amp; Temperature Explorer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #F7F5F0;
+    --amber: #C4850A;
+    --amber-light: #E8A830;
+    --amber-glow: rgba(196, 133, 10, 0.12);
+    --dark: #2A2520;
+    --mid: #6B5F54;
+    --light-border: #DDD8D0;
+    --card-bg: #FFFFFF;
+    --mono: "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    background: var(--cream);
+    color: var(--dark);
+    font-family: var(--sans);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  h1 {
+    font-size: 1.85rem;
+    font-weight: 700;
+    color: var(--dark);
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    font-size: 1.05rem;
+    color: var(--mid);
+    margin-top: 0.35rem;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--light-border);
+    border-radius: 14px;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 3px rgba(42, 37, 32, 0.04);
+  }
+
+  .card-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--amber);
+    margin-bottom: 1.1rem;
+  }
+
+  /* ---- Logit Sliders ---- */
+  .logit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.7rem;
+  }
+  .logit-row:last-child { margin-bottom: 0; }
+
+  .token-label {
+    width: 80px;
+    font-weight: 600;
+    font-size: 0.92rem;
+    flex-shrink: 0;
+  }
+
+  .logit-slider-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  .logit-value {
+    width: 52px;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    color: var(--mid);
+    flex-shrink: 0;
+  }
+
+  /* ---- Shared slider styling ---- */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--light-border);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--amber);
+    border: 2.5px solid var(--card-bg);
+    box-shadow: 0 1px 4px rgba(42, 37, 32, 0.25);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(196, 133, 10, 0.4);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--amber);
+    border: 2.5px solid var(--card-bg);
+    box-shadow: 0 1px 4px rgba(42, 37, 32, 0.25);
+    cursor: pointer;
+  }
+
+  /* ---- Probability Bars ---- */
+  .prob-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.55rem;
+  }
+  .prob-row:last-child { margin-bottom: 0; }
+
+  .prob-label {
+    width: 80px;
+    font-weight: 600;
+    font-size: 0.92rem;
+    flex-shrink: 0;
+  }
+
+  .bar-track {
+    flex: 1;
+    height: 28px;
+    background: var(--cream);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.18s ease-out, background-color 0.18s ease-out;
+    min-width: 2px;
+  }
+
+  .prob-number {
+    width: 60px;
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--mid);
+    flex-shrink: 0;
+  }
+
+  /* ---- Temperature Slider ---- */
+  .temp-section {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .temp-slider-wrap {
+    flex: 1;
+  }
+
+  .temp-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--mid);
+  }
+
+  .temp-value-display {
+    font-family: var(--mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--amber);
+    min-width: 60px;
+    text-align: center;
+  }
+
+  .temp-caption {
+    font-size: 0.78rem;
+    color: var(--mid);
+    text-align: center;
+    margin-top: 0.15rem;
+  }
+
+  /* ---- Math Panel ---- */
+  .math-step {
+    margin-bottom: 0.85rem;
+    padding: 0.65rem 0.85rem;
+    background: var(--cream);
+    border-radius: 8px;
+    font-size: 0.84rem;
+    overflow-x: auto;
+  }
+  .math-step:last-child { margin-bottom: 0; }
+
+  .math-label {
+    font-weight: 600;
+    color: var(--mid);
+    font-size: 0.78rem;
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+
+  .math-expr {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--dark);
+    word-break: break-all;
+    line-height: 1.65;
+  }
+
+  /* ---- Insight badge ---- */
+  .insight {
+    margin-top: 1rem;
+    padding: 0.65rem 1rem;
+    background: var(--amber-glow);
+    border-left: 3px solid var(--amber);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.88rem;
+    color: var(--dark);
+    line-height: 1.5;
+  }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 600px) {
+    body { padding: 1.25rem 0.75rem 3rem; }
+    .card { padding: 1.15rem 1rem; }
+    h1 { font-size: 1.4rem; }
+    .token-label, .prob-label { width: 60px; font-size: 0.82rem; }
+    .temp-section { flex-direction: column; gap: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>Softmax &amp; Temperature Explorer</h1>
+    <p class="subtitle">Drag the sliders to see how logits become probabilities</p>
+  </header>
+
+  <div class="card" id="logit-card">
+    <div class="card-title">Logits (raw model outputs)</div>
+    <div id="logit-sliders"></div>
+  </div>
+
+  <div class="card" id="temp-card">
+    <div class="card-title">Temperature</div>
+    <div class="temp-section">
+      <div class="temp-slider-wrap">
+        <input type="range" id="temp-slider" min="0.1" max="5.0" step="0.05" value="1.0">
+        <div class="temp-labels">
+          <span>0.1 (confident)</span>
+          <span>1.0</span>
+          <span>5.0 (random)</span>
+        </div>
+      </div>
+      <div>
+        <div class="temp-value-display" id="temp-display">1.00</div>
+        <div class="temp-caption">T</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="prob-card">
+    <div class="card-title">Probabilities (after softmax)</div>
+    <div id="prob-bars"></div>
+  </div>
+
+  <div class="card" id="math-card">
+    <div class="card-title">The Math (live)</div>
+    <div id="math-steps"></div>
+    <div class="insight" id="insight"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var TOKENS = ["Token A", "Token B", "Token C", "Token D", "Token E"];
+  var COLORS = ["#C4850A", "#D4993A", "#B07808", "#8C6006", "#A87210"];
+  var DEFAULT_LOGITS = [2.0, 1.0, 0.5, -1.0, 0.0];
+
+  var logits = DEFAULT_LOGITS.slice();
+  var temperature = 1.0;
+
+  // ---- DOM references built once ----
+  var logitSliderContainer = document.getElementById("logit-sliders");
+  var probBarsContainer = document.getElementById("prob-bars");
+  var mathStepsContainer = document.getElementById("math-steps");
+  var tempSlider = document.getElementById("temp-slider");
+  var tempDisplay = document.getElementById("temp-display");
+  var insightEl = document.getElementById("insight");
+
+  var sliderInputs = [];
+  var sliderValueEls = [];
+  var barFills = [];
+  var probNumbers = [];
+
+  // ---- Build logit slider rows ----
+  TOKENS.forEach(function (name, i) {
+    var row = document.createElement("div");
+    row.className = "logit-row";
+
+    var label = document.createElement("span");
+    label.className = "token-label";
+    label.textContent = name;
+
+    var wrap = document.createElement("div");
+    wrap.className = "logit-slider-wrap";
+
+    var slider = document.createElement("input");
+    slider.type = "range";
+    slider.min = "-5";
+    slider.max = "5";
+    slider.step = "0.1";
+    slider.value = String(DEFAULT_LOGITS[i]);
+    slider.setAttribute("aria-label", name + " logit");
+
+    wrap.appendChild(slider);
+
+    var val = document.createElement("span");
+    val.className = "logit-value";
+    val.textContent = formatNum(DEFAULT_LOGITS[i]);
+
+    row.appendChild(label);
+    row.appendChild(wrap);
+    row.appendChild(val);
+    logitSliderContainer.appendChild(row);
+
+    sliderInputs.push(slider);
+    sliderValueEls.push(val);
+
+    slider.addEventListener("input", function () {
+      logits[i] = parseFloat(slider.value);
+      sliderValueEls[i].textContent = formatNum(logits[i]);
+      update();
+    });
+  });
+
+  // ---- Build probability bar rows ----
+  TOKENS.forEach(function (name, i) {
+    var row = document.createElement("div");
+    row.className = "prob-row";
+
+    var label = document.createElement("span");
+    label.className = "prob-label";
+    label.textContent = name;
+
+    var track = document.createElement("div");
+    track.className = "bar-track";
+
+    var fill = document.createElement("div");
+    fill.className = "bar-fill";
+    fill.style.width = "0%";
+    fill.style.backgroundColor = COLORS[i];
+
+    track.appendChild(fill);
+
+    var num = document.createElement("span");
+    num.className = "prob-number";
+    num.textContent = "0.0%";
+
+    row.appendChild(label);
+    row.appendChild(track);
+    row.appendChild(num);
+    probBarsContainer.appendChild(row);
+
+    barFills.push(fill);
+    probNumbers.push(num);
+  });
+
+  // ---- Build math step containers ----
+  var STEP_LABELS = [
+    "Step 1: Scale logits by temperature",
+    "Step 2: Exponentiate",
+    "Step 3: Sum",
+    "Step 4: Normalize (divide by sum)"
+  ];
+
+  var mathExprEls = [];
+  STEP_LABELS.forEach(function (label) {
+    var step = document.createElement("div");
+    step.className = "math-step";
+
+    var lbl = document.createElement("span");
+    lbl.className = "math-label";
+    lbl.textContent = label;
+
+    var expr = document.createElement("div");
+    expr.className = "math-expr";
+
+    step.appendChild(lbl);
+    step.appendChild(expr);
+    mathStepsContainer.appendChild(step);
+
+    mathExprEls.push(expr);
+  });
+
+  // ---- Temperature slider ----
+  tempSlider.addEventListener("input", function () {
+    temperature = parseFloat(tempSlider.value);
+    tempDisplay.textContent = temperature.toFixed(2);
+    update();
+  });
+
+  // ---- Softmax computation ----
+  function softmax(logitArr, temp) {
+    var scaled = logitArr.map(function (v) { return v / temp; });
+
+    // Numerical stability: subtract max before exp
+    var maxScaled = Math.max.apply(null, scaled);
+    var exps = scaled.map(function (v) { return Math.exp(v - maxScaled); });
+    var sumExp = exps.reduce(function (a, b) { return a + b; }, 0);
+    var probs = exps.map(function (v) { return v / sumExp; });
+
+    // Also compute the "raw" (non-stabilized) values for display purposes
+    var rawExps = scaled.map(function (v) { return Math.exp(v); });
+    var rawSum = rawExps.reduce(function (a, b) { return a + b; }, 0);
+
+    return { scaled: scaled, exps: rawExps, sum: rawSum, probs: probs };
+  }
+
+  // ---- Formatting helpers ----
+  function formatNum(n) {
+    var s = n.toFixed(1);
+    return n >= 0 ? "+" + s : s;
+  }
+
+  function formatFixed(n, d) {
+    return n.toFixed(d);
+  }
+
+  function bracketList(arr, decimals) {
+    return "[" + arr.map(function (v) { return formatFixed(v, decimals); }).join(", ") + "]";
+  }
+
+  // ---- Color helpers ----
+  function barColor(prob, baseColor) {
+    // Lerp alpha based on probability — range from 0.18 to 1.0
+    var alpha = 0.18 + prob * 0.82;
+    return hexToRgba(baseColor, alpha);
+  }
+
+  function hexToRgba(hex, alpha) {
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+    return "rgba(" + r + ", " + g + ", " + b + ", " + alpha + ")";
+  }
+
+  // ---- Insight text ----
+  function getInsight(temp, probs) {
+    var maxProb = Math.max.apply(null, probs);
+    var minProb = Math.min.apply(null, probs);
+    var ratio = maxProb / Math.max(minProb, 1e-12);
+
+    if (temp <= 0.15) {
+      return "At near-zero temperature, the model is almost deterministic -- it picks the highest-logit token with near certainty. This is called \"greedy decoding.\"";
+    } else if (temp < 0.5) {
+      return "Low temperature sharpens the distribution. The top token is " + (maxProb * 100).toFixed(0) + "% likely -- the model is quite confident.";
+    } else if (temp <= 1.05 && temp >= 0.95) {
+      return "At T=1.0, the probabilities match the standard softmax -- no temperature scaling applied. This is the \"neutral\" setting.";
+    } else if (temp < 2.0) {
+      return "Moderate temperature smooths the distribution. The gap between likely and unlikely tokens is shrinking.";
+    } else if (temp < 4.0) {
+      return "High temperature makes the model more \"creative\" (or random). The top token is only " + (maxProb * 100).toFixed(0) + "% likely now.";
+    } else {
+      return "At very high temperature, the distribution is nearly uniform (" + (minProb * 100).toFixed(1) + "% to " + (maxProb * 100).toFixed(1) + "%). The model would pick almost randomly among all tokens.";
+    }
+  }
+
+  // ---- Main update ----
+  function update() {
+    var result = softmax(logits, temperature);
+
+    // Update probability bars
+    for (var i = 0; i < TOKENS.length; i++) {
+      var pct = result.probs[i] * 100;
+      barFills[i].style.width = pct + "%";
+      barFills[i].style.backgroundColor = barColor(result.probs[i], COLORS[i]);
+      probNumbers[i].textContent = pct.toFixed(1) + "%";
+    }
+
+    // Update math -- Step 1: scaled logits
+    mathExprEls[0].textContent =
+      bracketList(logits, 1) + " / " + formatFixed(temperature, 2) +
+      " = " + bracketList(result.scaled, 2);
+
+    // Step 2: exp
+    mathExprEls[1].textContent =
+      "exp(" + bracketList(result.scaled, 2) + ") = " + bracketList(result.exps, 4);
+
+    // Step 3: sum
+    mathExprEls[2].textContent =
+      result.exps.map(function (v) { return formatFixed(v, 4); }).join(" + ") +
+      " = " + formatFixed(result.sum, 4);
+
+    // Step 4: probabilities
+    mathExprEls[3].textContent =
+      bracketList(result.exps, 4) + " / " + formatFixed(result.sum, 4) +
+      " = " + bracketList(result.probs, 4);
+
+    // Update insight
+    insightEl.textContent = getInsight(temperature, result.probs);
+  }
+
+  // ---- Initial render ----
+  update();
+})();
+</script>
+</body>
+</html>

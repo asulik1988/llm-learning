@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loss Explorer: -log(probability)</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #F7F5F0;
+    color: #2A2520;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem 3rem;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-size: clamp(1.4rem, 3.5vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+  }
+
+  .subtitle {
+    font-size: clamp(0.9rem, 2vw, 1.05rem);
+    color: #6B6560;
+    margin-bottom: 1.5rem;
+    font-style: italic;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    cursor: grab;
+    border-radius: 6px;
+    background: #FFFEFA;
+    box-shadow: 0 1px 4px rgba(42,37,32,0.08);
+  }
+  canvas:active { cursor: grabbing; }
+
+  .slider-row {
+    width: 100%;
+    max-width: 720px;
+    margin-top: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .slider-label {
+    font-size: 0.85rem;
+    color: #6B6560;
+    white-space: nowrap;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: #DDD8D0;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #C4850A;
+    cursor: pointer;
+    border: 2px solid #FFFEFA;
+    box-shadow: 0 1px 4px rgba(42,37,32,0.25);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #C4850A;
+    cursor: pointer;
+    border: 2px solid #FFFEFA;
+    box-shadow: 0 1px 4px rgba(42,37,32,0.25);
+  }
+
+  .info-panel {
+    width: 100%;
+    max-width: 720px;
+    margin-top: 1.25rem;
+    background: #FFFEFA;
+    border: 1px solid #E6E1D9;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 1px 4px rgba(42,37,32,0.06);
+  }
+
+  .info-line {
+    font-size: clamp(0.95rem, 2vw, 1.05rem);
+    line-height: 1.7;
+  }
+
+  .info-line + .info-line { margin-top: 0.15rem; }
+
+  .val {
+    font-weight: 700;
+    color: #C4850A;
+  }
+
+  .quality-badge {
+    display: inline-block;
+    margin-top: 0.6rem;
+    padding: 0.25rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  .q-terrible  { background: #F4D3D3; color: #8B2020; }
+  .q-bad       { background: #F5DFC4; color: #7A4A0A; }
+  .q-mediocre  { background: #F5EECD; color: #6B5A10; }
+  .q-good      { background: #D8ECCE; color: #2E6318; }
+  .q-great     { background: #C4E4D0; color: #1A5C32; }
+
+  .legend {
+    width: 100%;
+    max-width: 720px;
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    font-size: 0.82rem;
+    color: #6B6560;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<h1>Loss Explorer: -log(probability)</h1>
+<p class="subtitle">Drag to see how prediction confidence maps to loss</p>
+
+<div class="canvas-wrap">
+  <canvas id="chart"></canvas>
+</div>
+
+<div class="slider-row">
+  <span class="slider-label">Probability:</span>
+  <input type="range" id="slider" min="1" max="100" value="35">
+</div>
+
+<div class="info-panel" id="panel"></div>
+
+<div class="legend" id="legend"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---- constants ---- */
+  var CREAM   = '#F7F5F0';
+  var BG      = '#FFFEFA';
+  var AMBER   = '#C4850A';
+  var DARK    = '#2A2520';
+  var GRID    = '#E6E1D9';
+  var MUTED   = '#A09890';
+  var REF_CLR = '#7B9BAA';
+
+  var PAD_L = 62, PAD_R = 24, PAD_T = 20, PAD_B = 52;
+  var Y_MAX = 5;
+
+  var REFS = [
+    { p: 1 / 27, label: 'Random guess (1/27)', color: '#B85450' },
+    { p: 0.3,    label: 'Decent prediction',    color: '#6B8E6B' },
+    { p: 0.9,    label: 'Great prediction',      color: '#2E7D5B' }
+  ];
+  REFS.forEach(function (r) { r.loss = -Math.log(r.p); });
+
+  /* ---- DOM refs ---- */
+  var canvas = document.getElementById('chart');
+  var ctx    = canvas.getContext('2d');
+  var slider = document.getElementById('slider');
+  var panel  = document.getElementById('panel');
+  var legendEl = document.getElementById('legend');
+
+  /* ---- build legend ---- */
+  REFS.forEach(function (r) {
+    var item = document.createElement('span');
+    item.className = 'legend-item';
+    var dot = document.createElement('span');
+    dot.className = 'legend-dot';
+    dot.style.backgroundColor = r.color;
+    var txt = document.createElement('span');
+    txt.textContent = r.label + ' (p=' + r.p.toFixed(3) + ', loss=' + r.loss.toFixed(2) + ')';
+    item.appendChild(dot);
+    item.appendChild(txt);
+    legendEl.appendChild(item);
+  });
+
+  /* ---- state ---- */
+  var prob = 0.35;
+  var dpr  = window.devicePixelRatio || 1;
+  var W, H, plotW, plotH;
+
+  /* ---- sizing ---- */
+  function resize() {
+    var wrap = canvas.parentElement;
+    var cssW = wrap.clientWidth;
+    var cssH = Math.round(cssW * 0.62);
+    canvas.style.width  = cssW + 'px';
+    canvas.style.height = cssH + 'px';
+    W = Math.round(cssW * dpr);
+    H = Math.round(cssH * dpr);
+    canvas.width  = W;
+    canvas.height = H;
+    plotW = W - (PAD_L + PAD_R) * dpr;
+    plotH = H - (PAD_T + PAD_B) * dpr;
+    draw();
+  }
+
+  /* ---- coordinate helpers ---- */
+  function xToCanvas(x) { return PAD_L * dpr + (x) * plotW; }
+  function yToCanvas(y) { return PAD_T * dpr + (1 - y / Y_MAX) * plotH; }
+
+  /* ---- drawing ---- */
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    var d = dpr;
+    ctx.save();
+
+    /* grid lines */
+    ctx.strokeStyle = GRID;
+    ctx.lineWidth = 1 * d;
+    for (var gy = 0; gy <= Y_MAX; gy++) {
+      var yy = yToCanvas(gy);
+      ctx.beginPath(); ctx.moveTo(PAD_L * d, yy); ctx.lineTo(W - PAD_R * d, yy); ctx.stroke();
+    }
+    for (var gx = 0; gx <= 10; gx++) {
+      var xx = xToCanvas(gx / 10);
+      ctx.beginPath(); ctx.moveTo(xx, PAD_T * d); ctx.lineTo(xx, H - PAD_B * d); ctx.stroke();
+    }
+
+    /* axes */
+    ctx.strokeStyle = DARK;
+    ctx.lineWidth = 1.5 * d;
+    ctx.beginPath();
+    ctx.moveTo(PAD_L * d, PAD_T * d);
+    ctx.lineTo(PAD_L * d, H - PAD_B * d);
+    ctx.lineTo(W - PAD_R * d, H - PAD_B * d);
+    ctx.stroke();
+
+    /* axis labels */
+    ctx.fillStyle = MUTED;
+    ctx.font = (12 * d) + 'px Georgia, serif';
+    ctx.textAlign = 'center';
+
+    /* x-axis ticks */
+    for (var tx = 0; tx <= 10; tx++) {
+      var lx = xToCanvas(tx / 10);
+      ctx.fillText((tx / 10).toFixed(1), lx, H - (PAD_B - 18) * d);
+    }
+    ctx.fillText('Probability assigned to correct answer', (PAD_L * d + W - PAD_R * d) / 2, H - 8 * d);
+
+    /* y-axis ticks */
+    ctx.textAlign = 'right';
+    for (var ty = 0; ty <= Y_MAX; ty++) {
+      ctx.fillText(ty.toString(), (PAD_L - 8) * d, yToCanvas(ty) + 4 * d);
+    }
+    ctx.save();
+    ctx.translate(14 * d, (PAD_T * d + H - PAD_B * d) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillText('Loss', 0, 0);
+    ctx.restore();
+
+    /* -log(x) curve */
+    ctx.strokeStyle = AMBER;
+    ctx.lineWidth = 2.5 * d;
+    ctx.beginPath();
+    var STEPS = 500;
+    for (var i = 0; i <= STEPS; i++) {
+      var px = 0.01 + (i / STEPS) * 0.99;
+      var py = -Math.log(px);
+      if (py > Y_MAX) py = Y_MAX;
+      var cx = xToCanvas(px);
+      var cy = yToCanvas(py);
+      if (i === 0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+
+    /* reference points */
+    REFS.forEach(function (r) {
+      var rx = xToCanvas(r.p);
+      var ry = yToCanvas(Math.min(r.loss, Y_MAX));
+      ctx.fillStyle = r.color;
+      ctx.beginPath();
+      ctx.arc(rx, ry, 5 * d, 0, Math.PI * 2);
+      ctx.fill();
+
+      /* tiny label */
+      ctx.fillStyle = r.color;
+      ctx.font = 'italic ' + (10.5 * d) + 'px Georgia, serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(r.label, rx + 8 * d, ry - 6 * d);
+    });
+
+    /* interactive point */
+    var loss = -Math.log(prob);
+    if (loss > Y_MAX) loss = Y_MAX;
+    var ptX = xToCanvas(prob);
+    var ptY = yToCanvas(loss);
+
+    /* dashed lines */
+    ctx.setLineDash([6 * d, 4 * d]);
+    ctx.strokeStyle = AMBER;
+    ctx.lineWidth = 1.2 * d;
+    ctx.globalAlpha = 0.55;
+
+    /* vertical dashed */
+    ctx.beginPath();
+    ctx.moveTo(ptX, ptY);
+    ctx.lineTo(ptX, H - PAD_B * d);
+    ctx.stroke();
+
+    /* horizontal dashed */
+    ctx.beginPath();
+    ctx.moveTo(ptX, ptY);
+    ctx.lineTo(PAD_L * d, ptY);
+    ctx.stroke();
+
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    /* glow behind point */
+    var glow = ctx.createRadialGradient(ptX, ptY, 0, ptX, ptY, 18 * d);
+    glow.addColorStop(0, 'rgba(196,133,10,0.25)');
+    glow.addColorStop(1, 'rgba(196,133,10,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(ptX, ptY, 18 * d, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* point */
+    ctx.fillStyle = AMBER;
+    ctx.beginPath();
+    ctx.arc(ptX, ptY, 7 * d, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = BG;
+    ctx.lineWidth = 2 * d;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /* ---- info panel ---- */
+  function updatePanel() {
+    var loss = -Math.log(prob);
+    var label, cls;
+    if (loss > 3)      { label = 'Terrible'; cls = 'q-terrible'; }
+    else if (loss > 2) { label = 'Bad';      cls = 'q-bad'; }
+    else if (loss > 1) { label = 'Mediocre'; cls = 'q-mediocre'; }
+    else if (loss > 0.5) { label = 'Good';   cls = 'q-good'; }
+    else               { label = 'Great';    cls = 'q-great'; }
+
+    /* clear panel */
+    while (panel.firstChild) panel.removeChild(panel.firstChild);
+
+    /* line 1 */
+    var p1 = document.createElement('p');
+    p1.className = 'info-line';
+    p1.appendChild(document.createTextNode('The model assigned probability '));
+    var s1 = document.createElement('span');
+    s1.className = 'val';
+    s1.textContent = prob.toFixed(2);
+    p1.appendChild(s1);
+    p1.appendChild(document.createTextNode(' to the correct answer.'));
+    panel.appendChild(p1);
+
+    /* line 2 */
+    var p2 = document.createElement('p');
+    p2.className = 'info-line';
+    p2.appendChild(document.createTextNode('Loss = -log('));
+    var s2a = document.createElement('span');
+    s2a.className = 'val';
+    s2a.textContent = prob.toFixed(2);
+    p2.appendChild(s2a);
+    p2.appendChild(document.createTextNode(') = '));
+    var s2b = document.createElement('span');
+    s2b.className = 'val';
+    s2b.textContent = loss.toFixed(2);
+    p2.appendChild(s2b);
+    panel.appendChild(p2);
+
+    /* badge */
+    var badge = document.createElement('span');
+    badge.className = 'quality-badge ' + cls;
+    badge.textContent = label;
+    panel.appendChild(badge);
+  }
+
+  /* ---- interaction: slider ---- */
+  slider.addEventListener('input', function () {
+    prob = parseInt(slider.value, 10) / 100;
+    if (prob < 0.01) prob = 0.01;
+    draw();
+    updatePanel();
+  });
+
+  /* ---- interaction: canvas drag ---- */
+  var dragging = false;
+
+  function canvasProbFromEvent(e) {
+    var rect = canvas.getBoundingClientRect();
+    var cssX = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    var ratio = cssX / rect.width;
+    /* map cssX to data x, accounting for padding */
+    var padLFrac = PAD_L / (canvas.width / dpr);
+    var padRFrac = PAD_R / (canvas.width / dpr);
+    var dataRatio = (ratio - padLFrac) / (1 - padLFrac - padRFrac);
+    var p = 0.01 + dataRatio * 0.99;
+    return Math.max(0.01, Math.min(1, p));
+  }
+
+  function onPointerDown(e) {
+    dragging = true;
+    prob = canvasProbFromEvent(e);
+    slider.value = Math.round(prob * 100);
+    draw();
+    updatePanel();
+    e.preventDefault();
+  }
+  function onPointerMove(e) {
+    if (!dragging) return;
+    prob = canvasProbFromEvent(e);
+    slider.value = Math.round(prob * 100);
+    draw();
+    updatePanel();
+    e.preventDefault();
+  }
+  function onPointerUp() { dragging = false; }
+
+  canvas.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+  canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+  window.addEventListener('touchmove', onPointerMove, { passive: false });
+  window.addEventListener('touchend', onPointerUp);
+
+  /* ---- init ---- */
+  window.addEventListener('resize', resize);
+  resize();
+  updatePanel();
+})();
+</script>
+</body>
+</html>

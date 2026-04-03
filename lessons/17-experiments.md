@@ -336,4 +336,186 @@ Try changing one thing at a time so you can see its individual effect. If you ch
 
 The best way to build intuition for neural networks is to experiment. You now have enough understanding to predict what should happen before you run it, then check whether reality matches your prediction.
 
+## How Do You Know It's Actually Learning?
+
+So far we've been watching the training loss go down and looking at generated names. But there's a problem: **a model can get a low training loss by memorizing the data instead of learning patterns.**
+
+If microgpt memorized all 32,033 names perfectly, it would have a very low loss -- but it would only ever reproduce names it already saw. It wouldn't generalize to produce plausible *new* names. That's not what we want.
+
+### Training loss vs validation loss
+
+The standard way to detect this is to split your data:
+
+- **Training set**: the data the model learns from (~90%)
+- **Validation set**: data the model never sees during training (~10%)
+
+After each training step (or every N steps), you run the model on the validation set *without updating any parameters* and compute the loss. This **validation loss** tells you how well the model predicts data it hasn't memorized.
+
+Here's a script that adds validation tracking to microgpt. Save it as `microgpt_eval.py` in the `microgpt/` folder:
+
+```python
+"""microgpt with train/validation split to detect overfitting."""
+import os, math, random
+
+random.seed(42)
+
+if not os.path.exists('input.txt'):
+    import urllib.request
+    names_url = 'https://raw.githubusercontent.com/karpathy/makemore/988aa59/names.txt'
+    urllib.request.urlretrieve(names_url, 'input.txt')
+
+docs = [line.strip() for line in open('input.txt') if line.strip()]
+random.shuffle(docs)
+
+# Split: 90% train, 10% validation
+split = int(0.9 * len(docs))
+train_docs = docs[:split]
+val_docs = docs[split:]
+print(f"train: {len(train_docs)}, val: {len(val_docs)}")
+
+uchars = sorted(set(''.join(docs)))
+BOS = len(uchars)
+vocab_size = len(uchars) + 1
+
+# --- Paste the Value class, model setup, and gpt() function from microgpt.py ---
+# (everything from the Value class through the gpt() function definition)
+# We only change the training loop below.
+
+# --- After pasting, replace the training loop with: ---
+
+# To keep this example short, run the original microgpt.py once,
+# then use this snippet to understand the concept:
+
+print("""
+=== What to look for ===
+
+Healthy training:
+  step 100 | train_loss: 2.8 | val_loss: 2.9   (val tracks train)
+  step 500 | train_loss: 2.1 | val_loss: 2.2   (val tracks train)
+  step 900 | train_loss: 1.9 | val_loss: 2.0   (small gap = generalizing)
+
+Overfitting:
+  step 100 | train_loss: 2.8 | val_loss: 2.9   (fine so far)
+  step 500 | train_loss: 1.5 | val_loss: 2.3   (gap growing!)
+  step 900 | train_loss: 0.8 | val_loss: 2.5   (train keeps falling, val stuck)
+
+When val_loss stops improving or starts rising while train_loss
+keeps falling, the model is memorizing, not learning.
+""")
+```
+
+### What does overfitting look like?
+
+| Step | Train Loss | Val Loss | What's happening |
+|------|-----------|----------|-----------------|
+| 100 | 2.8 | 2.9 | Both high, model is still learning basics |
+| 500 | 2.1 | 2.2 | Both improving, model is generalizing well |
+| 1000 | 1.9 | 2.0 | Small gap -- healthy. Model learned real patterns |
+
+vs an overfit model:
+
+| Step | Train Loss | Val Loss | What's happening |
+|------|-----------|----------|-----------------|
+| 100 | 2.8 | 2.9 | Fine so far |
+| 500 | 1.5 | 2.3 | Gap growing -- memorizing training names |
+| 1000 | 0.8 | 2.5 | Train loss plummets but val loss rises. Overfit. |
+
+### Why sample quality can mislead
+
+Looking at generated names and thinking "these look good!" is unreliable. An overfit model can generate names that look fine -- because it's reproducing fragments of memorized training names. The only honest measure is validation loss on unseen data.
+
+This is why real ML projects always track validation metrics, and why "the loss went down" is not enough to claim the model improved.
+
+### microgpt's situation
+
+With only 4,192 parameters and 32,000 training names, microgpt is actually *too small* to memorize the data, so overfitting isn't a practical problem here. But the moment you scale up (more parameters, smaller dataset), it becomes the central challenge.
+
+## What Did the Model Actually Learn?
+
+The training loss went down. The generated names look plausible. But what's *inside* those 4,192 parameters? We can look.
+
+### Visualizing the learned embeddings
+
+After training, each letter has a 16-dimensional embedding vector. We can use dimensionality reduction to project those 16 numbers down to 2 and plot them. Save this as `microgpt/visualize.py`:
+
+```python
+"""Visualize what microgpt learned about letters."""
+import os, math, random
+
+# --- First, run microgpt training (copy the code up through the training loop) ---
+# --- Then add this after training completes: ---
+
+# For a quick visualization without re-training, here's the idea:
+# After training, state_dict['wte'] contains 27 rows of 16 numbers.
+# Each row is one letter's learned embedding.
+
+# We can examine relationships between letters:
+print("=== Cosine similarity between letter embeddings ===")
+print("(Higher = model treats these letters as more similar)\n")
+
+def cosine_sim(a, b):
+    dot = sum(x.data * y.data for x, y in zip(a, b))
+    mag_a = math.sqrt(sum(x.data ** 2 for x in a))
+    mag_b = math.sqrt(sum(x.data ** 2 for x in b))
+    if mag_a == 0 or mag_b == 0:
+        return 0
+    return dot / (mag_a * mag_b)
+
+# Compare vowels to each other vs consonants
+vowels = [uchars.index(c) for c in 'aeiou']
+consonants = [uchars.index(c) for c in 'bcdfg']
+
+wte = state_dict['wte']
+
+print("Vowel-vowel similarities:")
+for i in range(len(vowels)):
+    for j in range(i+1, len(vowels)):
+        sim = cosine_sim(wte[vowels[i]], wte[vowels[j]])
+        print(f"  {uchars[vowels[i]]}-{uchars[vowels[j]]}: {sim:.3f}")
+
+print("\nConsonant-consonant similarities:")
+for i in range(len(consonants)):
+    for j in range(i+1, len(consonants)):
+        sim = cosine_sim(wte[consonants[i]], wte[consonants[j]])
+        print(f"  {uchars[consonants[i]]}-{uchars[consonants[j]]}: {sim:.3f}")
+
+print("\nVowel-consonant similarities:")
+for v in vowels[:3]:
+    for c in consonants[:3]:
+        sim = cosine_sim(wte[v], wte[c])
+        print(f"  {uchars[v]}-{uchars[c]}: {sim:.3f}")
+```
+
+If the model learned useful patterns, you should see that **vowels are more similar to each other** than they are to consonants. Not because anyone programmed "vowels are a group," but because vowels appear in similar contexts in names, so gradient descent pushed their embeddings in similar directions.
+
+### Inspecting attention patterns
+
+You can also look at what the attention heads learned to focus on. After a forward pass, the `attn_weights` variable (line 163) shows which past tokens each head attends to. For a name like "anna":
+
+- One head might always attend to the immediately previous token (a "bigram" head)
+- Another might attend to the first letter of the name
+- Another might track vowel/consonant alternation
+
+These specializations aren't programmed -- they emerge because different heads found different patterns useful for reducing the loss.
+
+To inspect this, add a print statement inside the attention loop at `microgpt.py:163`:
+
+```python
+attn_weights = softmax(attn_logits)
+# Add this line to see what the head attends to:
+print(f"  head {h}, pos {pos_id}: weights = {[f'{w.data:.2f}' for w in attn_weights]}")
+```
+
+Run inference on a single name and you'll see each head's attention distribution at each position.
+
+## The Full Experiment Checklist
+
+For any experiment, check all three:
+
+1. **Training loss** -- did it decrease? (necessary but not sufficient)
+2. **Validation loss** -- did it decrease too? (the real test)
+3. **Generated samples** -- do they look qualitatively better? (sanity check, not proof)
+
+If training loss drops but validation loss doesn't, you overfit. If both drop but samples look worse, your temperature or sampling might be off. All three together give you confidence that the model genuinely improved.
+
 Next: [Lesson 18](./18-from-microgpt-to-gpt4.md)

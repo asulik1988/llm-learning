@@ -110,6 +110,10 @@ That's the whole thing. There is no additional trick. No magic. Just: multiply t
 
 The word "back" in backpropagation means we start from the loss (the end) and work **backward** to the parameters (the beginning). The word "propagation" means we are propagating (spreading) the gradient information backward through the chain.
 
+**Try it yourself:** Build an expression and step through backpropagation one node at a time.
+
+[Backpropagation Stepper](./interactive/backprop-stepper.html)
+
 ## How microgpt Does It: The backward() Method
 
 Let's look at how this actually works in code. The `backward()` method lives at `microgpt.py:81-97`:
@@ -231,4 +235,14 @@ Multiply the slopes along the chain. That's the chain rule. That's backpropagati
 > 5. `build_topo` (`microgpt.py:85-90`) sorts operations so we can walk backward through them
 > 6. One backward pass computes gradients for all 4,192 parameters at once
 
+
+---
+
+> **Lab 7: Add Tanh** — Implement a new operation in the Value class and verify it works.
+>
+> ```bash
+> cd labs && python3 lab07_add_tanh.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 8](./08-neuron.md)

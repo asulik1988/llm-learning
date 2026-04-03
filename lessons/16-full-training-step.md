@@ -250,4 +250,14 @@ Each component we studied plays a specific role in making the model learn:
 
 Remove any one of these and training breaks down. They form an interlocking system where each part enables the others.
 
+---
+
+> **Lab 16: LR Warmup** — Compare linear decay, cosine decay, and warmup + cosine schedules.
+>
+> ```bash
+> cd labs && python3 lab16_lr_warmup.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
+
 Next: [Lesson 17](./17-experiments.md)

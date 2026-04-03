@@ -312,4 +312,14 @@ We now understand the full path from raw text to the model's internal representa
 > 6. **rmsnorm** (`microgpt.py:131-134`): scale the vector so its root-mean-square is `1.0`
 > 7. The embedding tables hold `1,120` of the model's `4,192` total parameters
 
+
+---
+
+> **Lab 12: Trace the Pipeline** — Walk through every step: text to tokens to embeddings to position to normalization. Print everything.
+>
+> ```bash
+> cd labs && python3 lab12_trace_the_pipeline.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 13](./13-attention.md)

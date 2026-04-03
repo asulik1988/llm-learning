@@ -40,6 +40,10 @@ Again, the result is just `6x + 8`. A single layer with weight `6` and bias `8` 
 
 This is not a coincidence. It's a mathematical fact: **a linear function of a linear function is always linear**. No matter how many layers you stack, the result is always equivalent to a single layer. You could have one layer or a hundred -- the expressive power is the same.
 
+**Try it yourself:** Toggle between activation functions and see how they affect what a network can learn.
+
+[Activation Function Explorer](./interactive/relu-explorer.html)
+
 ### What "linear" means visually
 
 A linear function draws a straight line:
@@ -228,4 +232,14 @@ This means during training, neurons that were off don't get updated. Only the ne
 > 5. `microgpt.py:57-58`: gradient is `1` (on) or `0` (off) -- the simplest possible gradient
 > 6. The MLP sandwich is: linear (expand 16 to 64) then relu (bend) then linear (compress 64 to 16)
 
+
+---
+
+> **Lab 9: Remove ReLU** — Delete the nonlinearity. See linearity collapse in action.
+>
+> ```bash
+> cd labs && python3 lab09_remove_relu.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 10](./10-gradient-descent.md)

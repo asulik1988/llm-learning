@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dot Product Playground</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #F7F5F0;
+    color: #2A2520;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem 3rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  header h1 {
+    font-size: 1.85rem;
+    font-weight: 700;
+    color: #2A2520;
+    letter-spacing: -0.02em;
+  }
+
+  header p {
+    font-size: 1rem;
+    color: #7A7570;
+    margin-top: 0.3rem;
+  }
+
+  .playground {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 960px;
+    width: 100%;
+  }
+
+  .canvas-wrap {
+    position: relative;
+    border-radius: 12px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 12px rgba(42,37,32,0.08);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  canvas {
+    display: block;
+    cursor: default;
+  }
+
+  .panel {
+    flex: 1 1 280px;
+    min-width: 260px;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .card {
+    background: #FFFFFF;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(42,37,32,0.08);
+    padding: 1.25rem;
+  }
+
+  .card h2 {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #9A9590;
+    margin-bottom: 0.75rem;
+  }
+
+  .calc-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.55rem;
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .calc-label {
+    font-weight: 600;
+    white-space: nowrap;
+    min-width: 70px;
+  }
+
+  .calc-value {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.88rem;
+    color: #5A5550;
+    word-break: break-word;
+  }
+
+  .dot-result {
+    font-size: 1.35rem;
+    font-weight: 700;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    transition: color 0.2s;
+  }
+
+  .dot-breakdown {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.82rem;
+    color: #7A7570;
+    margin-top: 0.15rem;
+  }
+
+  .similarity-badge {
+    display: inline-block;
+    padding: 0.2rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  .presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .preset-btn {
+    background: #F0EDE8;
+    border: 1px solid #E0DDD8;
+    border-radius: 8px;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #2A2520;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    font-family: inherit;
+  }
+
+  .preset-btn:hover {
+    background: #E8E5E0;
+    border-color: #C4850A;
+  }
+
+  .preset-btn:active {
+    background: #DDD8D0;
+  }
+
+  .attention-note {
+    background: #FFFCF5;
+    border: 1px solid #E8DCC8;
+    border-radius: 12px;
+    padding: 1rem 1.15rem;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: #5A5550;
+    max-width: 960px;
+    width: 100%;
+    margin-top: 1.5rem;
+  }
+
+  .attention-note strong {
+    color: #C4850A;
+  }
+
+  .attention-note code {
+    background: #F0EDE8;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.8rem;
+  }
+
+  .vec-a-color { color: #4A7FA5; }
+  .vec-b-color { color: #C4850A; }
+
+  @media (max-width: 720px) {
+    .playground { flex-direction: column; align-items: center; }
+    .panel { max-width: 100%; min-width: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Dot Product Playground</h1>
+  <p>Drag the vectors to see how direction affects similarity</p>
+</header>
+
+<div class="playground">
+  <div class="canvas-wrap">
+    <canvas id="vectorCanvas" width="460" height="460"></canvas>
+  </div>
+  <div class="panel" id="panel"></div>
+</div>
+
+<div class="attention-note" id="attentionNote"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // --- Configuration ---
+  var CANVAS_SIZE = 460;
+  var GRID_RANGE = 5;            // -5 to +5
+  var ORIGIN = CANVAS_SIZE / 2;
+  var SCALE = ORIGIN / (GRID_RANGE + 0.5); // pixels per unit, with padding
+
+  var COLOR_A = '#4A7FA5';
+  var COLOR_A_LIGHT = 'rgba(74,127,165,0.12)';
+  var COLOR_B = '#C4850A';
+  var COLOR_B_LIGHT = 'rgba(196,133,10,0.12)';
+  var COLOR_GRID = '#E8E5E0';
+  var COLOR_AXIS = '#C8C4BE';
+  var COLOR_BG = '#FFFFFF';
+  var COLOR_ARC = 'rgba(42,37,32,0.18)';
+  var COLOR_GREEN = '#2E8B57';
+  var COLOR_RED = '#C0392B';
+  var COLOR_GRAY = '#7A7570';
+
+  // --- State ---
+  var vecA = { x: 3, y: 1 };
+  var vecB = { x: 1, y: 2 };
+  var dragging = null; // 'A' or 'B' or null
+  var hoverTarget = null;
+
+  // --- Canvas ---
+  var canvas = document.getElementById('vectorCanvas');
+  var ctx = canvas.getContext('2d');
+
+  // Support high-DPI
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = CANVAS_SIZE * dpr;
+  canvas.height = CANVAS_SIZE * dpr;
+  canvas.style.width = CANVAS_SIZE + 'px';
+  canvas.style.height = CANVAS_SIZE + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // --- Build the panel via DOM ---
+  var panel = document.getElementById('panel');
+
+  // Vectors card
+  var vecCard = makeCard('Vectors');
+  var vecARow = makeCalcRow('A', '', 'vec-a-color');
+  var vecBRow = makeCalcRow('B', '', 'vec-b-color');
+  vecCard.appendChild(vecARow.row);
+  vecCard.appendChild(vecBRow.row);
+  panel.appendChild(vecCard);
+
+  // Dot product card
+  var dotCard = makeCard('Dot Product');
+  var dotResultEl = document.createElement('div');
+  dotResultEl.className = 'dot-result';
+  var dotBreakdownEl = document.createElement('div');
+  dotBreakdownEl.className = 'dot-breakdown';
+  var badgeEl = document.createElement('span');
+  badgeEl.className = 'similarity-badge';
+  dotCard.appendChild(dotResultEl);
+  dotCard.appendChild(dotBreakdownEl);
+  var badgeWrap = document.createElement('div');
+  badgeWrap.style.marginTop = '0.6rem';
+  badgeWrap.appendChild(badgeEl);
+  dotCard.appendChild(badgeWrap);
+  panel.appendChild(dotCard);
+
+  // Geometry card
+  var geoCard = makeCard('Geometry');
+  var magARow = makeCalcRow('|A|', '');
+  var magBRow = makeCalcRow('|B|', '');
+  var cosRow = makeCalcRow('cos(\u03B8)', '');
+  var angleRow = makeCalcRow('Angle', '');
+  geoCard.appendChild(magARow.row);
+  geoCard.appendChild(magBRow.row);
+  geoCard.appendChild(cosRow.row);
+  geoCard.appendChild(angleRow.row);
+  panel.appendChild(geoCard);
+
+  // Presets card
+  var presetCard = makeCard('Presets');
+  var presetsDiv = document.createElement('div');
+  presetsDiv.className = 'presets';
+
+  var presets = [
+    { label: 'Same direction', a: { x: 2, y: 1 }, b: { x: 4, y: 2 } },
+    { label: 'Perpendicular',  a: { x: 2, y: 1 }, b: { x: -1, y: 2 } },
+    { label: 'Opposite',       a: { x: 2, y: 1 }, b: { x: -2, y: -1 } },
+    { label: 'Reset',          a: { x: 3, y: 1 }, b: { x: 1, y: 2 } }
+  ];
+
+  presets.forEach(function (p) {
+    var btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    btn.textContent = p.label;
+    btn.addEventListener('click', function () {
+      vecA.x = p.a.x; vecA.y = p.a.y;
+      vecB.x = p.b.x; vecB.y = p.b.y;
+      update();
+    });
+    presetsDiv.appendChild(btn);
+  });
+  presetCard.appendChild(presetsDiv);
+  panel.appendChild(presetCard);
+
+  // Attention note
+  var noteDiv = document.getElementById('attentionNote');
+  var noteStrong = document.createElement('strong');
+  noteStrong.textContent = 'Connection to Attention: ';
+  noteDiv.appendChild(noteStrong);
+
+  var noteText1 = document.createTextNode(
+    'In attention, the Query vector is like A and each Key vector is like B. ' +
+    'High dot product = "this token is relevant to me." This is computed at '
+  );
+  noteDiv.appendChild(noteText1);
+
+  var noteCode = document.createElement('code');
+  noteCode.textContent = 'microgpt.py:162';
+  noteDiv.appendChild(noteCode);
+
+  var noteText2 = document.createTextNode('.');
+  noteDiv.appendChild(noteText2);
+
+  // --- Helpers ---
+  function makeCard(title) {
+    var card = document.createElement('div');
+    card.className = 'card';
+    var h2 = document.createElement('h2');
+    h2.textContent = title;
+    card.appendChild(h2);
+    return card;
+  }
+
+  function makeCalcRow(label, initialValue, extraClass) {
+    var row = document.createElement('div');
+    row.className = 'calc-row';
+    var lbl = document.createElement('span');
+    lbl.className = 'calc-label' + (extraClass ? ' ' + extraClass : '');
+    lbl.textContent = label;
+    var val = document.createElement('span');
+    val.className = 'calc-value';
+    val.textContent = initialValue;
+    row.appendChild(lbl);
+    row.appendChild(val);
+    return { row: row, value: val };
+  }
+
+  function fmt(n) {
+    return (Math.round(n * 100) / 100).toFixed(2);
+  }
+
+  function fmtShort(n) {
+    var r = Math.round(n * 100) / 100;
+    return r === Math.floor(r) ? r.toFixed(0) : r.toFixed(2);
+  }
+
+  function worldToCanvas(wx, wy) {
+    return {
+      cx: ORIGIN + wx * SCALE,
+      cy: ORIGIN - wy * SCALE
+    };
+  }
+
+  function canvasToWorld(cx, cy) {
+    return {
+      wx: (cx - ORIGIN) / SCALE,
+      wy: -(cy - ORIGIN) / SCALE
+    };
+  }
+
+  function snap(val) {
+    var rounded = Math.round(val * 4) / 4;
+    return Math.max(-GRID_RANGE, Math.min(GRID_RANGE, rounded));
+  }
+
+  function dist(ax, ay, bx, by) {
+    return Math.sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by));
+  }
+
+  // --- Drawing ---
+  function draw() {
+    ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    ctx.fillStyle = COLOR_BG;
+    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+    drawGrid();
+    drawAngleArc();
+    drawVector(vecA, COLOR_A, COLOR_A_LIGHT, 'A', hoverTarget === 'A' || dragging === 'A');
+    drawVector(vecB, COLOR_B, COLOR_B_LIGHT, 'B', hoverTarget === 'B' || dragging === 'B');
+  }
+
+  function drawGrid() {
+    ctx.strokeStyle = COLOR_GRID;
+    ctx.lineWidth = 1;
+
+    for (var i = -GRID_RANGE; i <= GRID_RANGE; i++) {
+      var p = worldToCanvas(i, 0);
+      // vertical
+      ctx.beginPath();
+      ctx.moveTo(p.cx, worldToCanvas(0, -GRID_RANGE).cy);
+      ctx.lineTo(p.cx, worldToCanvas(0, GRID_RANGE).cy);
+      ctx.stroke();
+      // horizontal
+      var q = worldToCanvas(0, i);
+      ctx.beginPath();
+      ctx.moveTo(worldToCanvas(-GRID_RANGE, 0).cx, q.cy);
+      ctx.lineTo(worldToCanvas(GRID_RANGE, 0).cx, q.cy);
+      ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = COLOR_AXIS;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(worldToCanvas(-GRID_RANGE, 0).cx, ORIGIN);
+    ctx.lineTo(worldToCanvas(GRID_RANGE, 0).cx, ORIGIN);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ORIGIN, worldToCanvas(0, -GRID_RANGE).cy);
+    ctx.lineTo(ORIGIN, worldToCanvas(0, GRID_RANGE).cy);
+    ctx.stroke();
+
+    // Axis tick labels
+    ctx.fillStyle = '#B0ACA8';
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (var t = -GRID_RANGE; t <= GRID_RANGE; t++) {
+      if (t === 0) continue;
+      var tp = worldToCanvas(t, 0);
+      ctx.fillText(t, tp.cx, ORIGIN + 6);
+    }
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (var u = -GRID_RANGE; u <= GRID_RANGE; u++) {
+      if (u === 0) continue;
+      var up = worldToCanvas(0, u);
+      ctx.fillText(u, ORIGIN - 8, up.cy);
+    }
+  }
+
+  function drawVector(v, color, lightColor, label, highlighted) {
+    var p = worldToCanvas(v.x, v.y);
+    var arrowLen = highlighted ? 14 : 12;
+    var arrowAngle = 0.35;
+    var lineW = highlighted ? 3 : 2.5;
+
+    var angle = Math.atan2(ORIGIN - p.cy, p.cx - ORIGIN);
+
+    // Shaft
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineW;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(ORIGIN, ORIGIN);
+    ctx.lineTo(p.cx, p.cy);
+    ctx.stroke();
+
+    // Arrowhead
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(p.cx, p.cy);
+    ctx.lineTo(
+      p.cx - arrowLen * Math.cos(angle - arrowAngle),
+      p.cy + arrowLen * Math.sin(angle - arrowAngle)
+    );
+    ctx.lineTo(
+      p.cx - arrowLen * Math.cos(angle + arrowAngle),
+      p.cy + arrowLen * Math.sin(angle + arrowAngle)
+    );
+    ctx.closePath();
+    ctx.fill();
+
+    // Endpoint circle (drag handle)
+    var radius = highlighted ? 9 : 7;
+    ctx.fillStyle = lightColor;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.cx, p.cy, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Label
+    var labelOffset = 18;
+    var lx = p.cx + labelOffset * Math.cos(angle);
+    var ly = p.cy - labelOffset * Math.sin(angle);
+    ctx.fillStyle = color;
+    ctx.font = 'bold 14px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, lx, ly);
+  }
+
+  function drawAngleArc() {
+    var angleA = Math.atan2(vecA.y, vecA.x);
+    var angleB = Math.atan2(vecB.y, vecB.x);
+
+    // Arc radius in pixels, scaled to be visible but not too large
+    var magA = Math.sqrt(vecA.x * vecA.x + vecA.y * vecA.y);
+    var magB = Math.sqrt(vecB.x * vecB.x + vecB.y * vecB.y);
+    var minMag = Math.min(magA, magB);
+    var arcRadius = Math.max(20, Math.min(40, minMag * SCALE * 0.35));
+
+    if (minMag < 0.1) return;
+
+    // Always draw the shorter arc
+    var startAngle = -angleA;  // canvas y is flipped
+    var endAngle = -angleB;
+
+    // Determine which direction is shorter
+    var diff = endAngle - startAngle;
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+
+    var counterClockwise = diff < 0;
+
+    ctx.strokeStyle = COLOR_ARC;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.arc(ORIGIN, ORIGIN, arcRadius, startAngle, endAngle, counterClockwise);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Angle label
+    var midAngle = startAngle + diff / 2;
+    var labelR = arcRadius + 14;
+    var lx = ORIGIN + labelR * Math.cos(midAngle);
+    var ly = ORIGIN + labelR * Math.sin(midAngle);
+
+    var angleDeg = Math.abs(diff) * 180 / Math.PI;
+    ctx.fillStyle = '#7A7570';
+    ctx.font = '12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(Math.round(angleDeg) + '\u00B0', lx, ly);
+  }
+
+  // --- Computations + UI update ---
+  function update() {
+    var ax = vecA.x, ay = vecA.y, bx = vecB.x, by = vecB.y;
+
+    var dot = ax * bx + ay * by;
+    var magA = Math.sqrt(ax * ax + ay * ay);
+    var magB = Math.sqrt(bx * bx + by * by);
+    var cosSim = (magA > 0.001 && magB > 0.001) ? dot / (magA * magB) : 0;
+    cosSim = Math.max(-1, Math.min(1, cosSim));
+    var angleDeg = Math.acos(cosSim) * 180 / Math.PI;
+
+    // Update vector labels
+    vecARow.value.textContent = '[' + fmtShort(ax) + ', ' + fmtShort(ay) + ']';
+    vecBRow.value.textContent = '[' + fmtShort(bx) + ', ' + fmtShort(by) + ']';
+
+    // Dot product
+    var dotColor;
+    var badge;
+    var badgeBg;
+    var badgeFg;
+    if (dot > 0.5) {
+      dotColor = COLOR_GREEN;
+      badge = 'Similar';
+      badgeBg = 'rgba(46,139,87,0.12)';
+      badgeFg = COLOR_GREEN;
+    } else if (dot < -0.5) {
+      dotColor = COLOR_RED;
+      badge = 'Opposite';
+      badgeBg = 'rgba(192,57,43,0.12)';
+      badgeFg = COLOR_RED;
+    } else {
+      dotColor = COLOR_GRAY;
+      badge = 'Perpendicular';
+      badgeBg = 'rgba(122,117,112,0.12)';
+      badgeFg = COLOR_GRAY;
+    }
+
+    dotResultEl.textContent = 'A \u00B7 B = ' + fmt(dot);
+    dotResultEl.style.color = dotColor;
+
+    var termX = fmtShort(ax) + '\u00D7' + fmtShort(bx);
+    var termY = fmtShort(ay) + '\u00D7' + fmtShort(by);
+    dotBreakdownEl.textContent = termX + ' + ' + termY +
+      ' = ' + fmtShort(ax * bx) + ' + ' + fmtShort(ay * by) +
+      ' = ' + fmtShort(dot);
+
+    badgeEl.textContent = badge;
+    badgeEl.style.background = badgeBg;
+    badgeEl.style.color = badgeFg;
+
+    // Geometry
+    magARow.value.textContent = fmt(magA);
+    magBRow.value.textContent = fmt(magB);
+    cosRow.value.textContent = fmt(cosSim);
+    angleRow.value.textContent = isNaN(angleDeg) ? '---' : fmt(angleDeg) + '\u00B0';
+
+    draw();
+  }
+
+  // --- Interaction ---
+  function getCanvasPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = CANVAS_SIZE / rect.width;
+    var scaleY = CANVAS_SIZE / rect.height;
+
+    var clientX, clientY;
+    if (e.touches) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    return {
+      cx: (clientX - rect.left) * scaleX,
+      cy: (clientY - rect.top) * scaleY
+    };
+  }
+
+  function hitTest(cx, cy) {
+    var pA = worldToCanvas(vecA.x, vecA.y);
+    var pB = worldToCanvas(vecB.x, vecB.y);
+    var hitRadius = 18;
+
+    var dA = dist(cx, cy, pA.cx, pA.cy);
+    var dB = dist(cx, cy, pB.cx, pB.cy);
+
+    if (dA < hitRadius && dA <= dB) return 'A';
+    if (dB < hitRadius) return 'B';
+    return null;
+  }
+
+  function onPointerDown(e) {
+    var pos = getCanvasPos(e);
+    var target = hitTest(pos.cx, pos.cy);
+    if (target) {
+      dragging = target;
+      canvas.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+  }
+
+  function onPointerMove(e) {
+    var pos = getCanvasPos(e);
+
+    if (dragging) {
+      var w = canvasToWorld(pos.cx, pos.cy);
+      var snapped = { x: snap(w.wx), y: snap(w.wy) };
+
+      if (dragging === 'A') {
+        vecA.x = snapped.x;
+        vecA.y = snapped.y;
+      } else {
+        vecB.x = snapped.x;
+        vecB.y = snapped.y;
+      }
+      update();
+      e.preventDefault();
+    } else {
+      var target = hitTest(pos.cx, pos.cy);
+      hoverTarget = target;
+      canvas.style.cursor = target ? 'grab' : 'default';
+      draw();
+    }
+  }
+
+  function onPointerUp() {
+    if (dragging) {
+      dragging = null;
+      canvas.style.cursor = hoverTarget ? 'grab' : 'default';
+    }
+  }
+
+  canvas.addEventListener('mousedown', onPointerDown);
+  canvas.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+
+  canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+  canvas.addEventListener('touchmove', function (e) {
+    if (dragging) {
+      var pos = getCanvasPos(e);
+      var w = canvasToWorld(pos.cx, pos.cy);
+      var snapped = { x: snap(w.wx), y: snap(w.wy) };
+
+      if (dragging === 'A') {
+        vecA.x = snapped.x;
+        vecA.y = snapped.y;
+      } else {
+        vecB.x = snapped.x;
+        vecB.y = snapped.y;
+      }
+      update();
+      e.preventDefault();
+    }
+  }, { passive: false });
+  canvas.addEventListener('touchend', onPointerUp);
+
+  // --- Initial render ---
+  update();
+})();
+</script>
+</body>
+</html>

@@ -62,6 +62,10 @@ P(correct) = 0.04  -->  loss = -log(0.04) = 3.22
 P(correct) = 0.01  -->  loss = -log(0.01) = 4.61
 ```
 
+**Try it yourself:** Drag the slider to see how probability maps to loss on the -log curve.
+
+[Loss Explorer](./interactive/loss-explorer.html)
+
 ### The Full Picture
 
 | P(correct) | -log(P) = Loss | Verdict |
@@ -124,6 +128,7 @@ A name like "emma" has multiple letters, and the model makes a prediction at eve
 | 1 | "e" | "m" | `0.04` | `3.22` |
 | 2 | "m" | "m" | `0.12` | `2.12` |
 | 3 | "m" | "a" | `0.15` | `1.90` |
+| 4 | "a" | BOS (end) | `0.10` | `2.30` |
 
 Each position produces a `loss_t` value. These are collected in `microgpt.py:195-202`:
 
@@ -144,15 +149,15 @@ Then on `microgpt.py:204`, all the per-position losses are **averaged**:
 loss = (1 / n) * sum(losses)
 ```
 
-For our example with 4 positions:
+For our example with 5 positions:
 
 ```
-loss = (1/4) * (2.53 + 3.22 + 2.12 + 1.90)
-     = (1/4) * 9.77
-     = 2.44
+loss = (1/5) * (2.53 + 3.22 + 2.12 + 1.90 + 2.30)
+     = (1/5) * 12.07
+     = 2.41
 ```
 
-The average loss for this training example is `2.44`. This single number summarizes how well the model predicted the name "emma."
+The average loss for this training example is `2.41`. This single number summarizes how well the model predicted the name "emma."
 
 ![diagram](./images/mermaid-05-loss-0.png)
 
@@ -206,4 +211,14 @@ If you see a starting loss much higher than `3.3`, something is broken. If it st
 > 5. Random guessing on 27 tokens gives a loss of about `3.3`
 > 6. The loss is the **only signal** that drives all learning -- every parameter adjustment aims to reduce this single number
 
+
+---
+
+> **Lab 5: Watch the Loss** — Trace loss values for specific names. See how -log(probability) translates to a score at every position.
+>
+> ```bash
+> cd labs && python3 lab05_watch_the_loss.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 6](./06-derivatives.md)

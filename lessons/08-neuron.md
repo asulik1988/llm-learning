@@ -218,4 +218,14 @@ The parameters from lesson 1 are organized into weight matrices. Each row of a w
 > 5. A neuron's **weights** are its parameters -- they start random and are tuned by training
 > 6. Every `linear()` call in the model is a layer of neurons running in parallel
 
+
+---
+
+> **Lab 8: Inspect a Neuron** — Look at a single neuron's weights, compute its output by hand, see what letters it responds to.
+>
+> ```bash
+> cd labs && python3 lab08_inspect_a_neuron.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 9](./09-relu.md)

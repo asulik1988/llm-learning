@@ -290,4 +290,14 @@ Adam needs `2 * 4,192 = 8,384` extra numbers to track momentum and variance for 
 > 5. **Gradient reset** (`microgpt.py:215`): zero out all gradients after each update
 > 6. Adam = momentum + adaptive scaling + bias correction. That's the whole algorithm.
 
+
+---
+
+> **Lab 11: Kill Momentum** — Disable Adam's tricks one at a time. See which one matters more.
+>
+> ```bash
+> cd labs && python3 lab11_kill_momentum.py
+> ```
+>
+> *Try the lab before moving on. Predict what will happen first.*
 Next: [Lesson 12](./12-tokenization-and-embeddings.md)
