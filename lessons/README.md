@@ -1,6 +1,6 @@
 # Understanding LLMs From Scratch
 
-**A hands-on course using [microgpt](../microgpt/microgpt.py) — a complete GPT in ~200 lines of pure Python.**
+**A hands-on course built on [microgpt](https://gist.github.com/karpathy/8627fe009c40f57531cb18360106ce95) by [Andrej Karpathy](https://karpathy.ai/) — a complete GPT in ~200 lines of pure Python, zero dependencies.**
 
 Every concept is grounded in real, runnable code. No prerequisites — we start from zero.
 
