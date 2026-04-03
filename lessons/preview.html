@@ -615,6 +615,36 @@
       margin: 24px 0;
       box-shadow: 0 2px 16px var(--shadow);
       border: 1px solid var(--border-light);
+      cursor: zoom-in;
+      transition: opacity 0.2s;
+    }
+
+    .lesson img:hover { opacity: 0.9; }
+
+    .img-lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+      animation: fadeIn 0.2s ease;
+      padding: 24px;
+    }
+
+    .img-lightbox img {
+      max-width: 95vw;
+      max-height: 95vh;
+      border-radius: 8px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+      cursor: zoom-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     .lesson ul, .lesson ol {
@@ -929,6 +959,20 @@ async function loadLesson(index) {
       if (p.textContent.startsWith('Previous:') || p.textContent.startsWith('Next:')) {
         p.remove();
       }
+    });
+
+    // Click-to-expand lightbox for images
+    contentEl.querySelectorAll('img').forEach(img => {
+      img.addEventListener('click', () => {
+        const lb = document.createElement('div');
+        lb.className = 'img-lightbox';
+        const fullImg = document.createElement('img');
+        fullImg.src = img.src;
+        fullImg.alt = img.alt;
+        lb.appendChild(fullImg);
+        lb.addEventListener('click', () => lb.remove());
+        document.body.appendChild(lb);
+      });
     });
 
     // Embed interactive visualizations: convert links to ./interactive/*.html into iframes
